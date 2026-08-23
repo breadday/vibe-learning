@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "verificationStatus": "pending",
+  "slug": "first-video",
+  "video": {
+    "youtubeId": null,
+    "title": null,
+    "channel": null,
+    "publishedAt": null,
+    "durationSeconds": null,
+    "language": null,
+    "originalUrl": null
+  },
+  "freshness": {
+    "status": "unverified",
+    "checkedAt": null,
+    "reason": "게시일과 영상 내용이 제공되지 않아 최신성을 판정하지 않았습니다."
+  },
+  "segments": [],
+  "practiceSteps": [],
+  "copyBlocks": [],
+  "concepts": [],
+  "warnings": [],
+  "sources": [],
+  "todo": [
+    "실제 YouTube URL과 영상 ID 확인",
+    "영상 제목, 채널, 게시일, 길이, 원본 언어 확인",
+    "사용 가능한 자막 또는 영상 내용 제공",
+    "요약, 영상 구간, 실습, 프롬프트와 공식 출처 검수"
+  ]
+}

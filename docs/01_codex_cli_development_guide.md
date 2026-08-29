@@ -64,8 +64,8 @@ codex --version
 
 ```powershell
 cd C:\workspace
-mkdir bive-learning
-cd bive-learning
+mkdir vibe-learning
+cd vibe-learning
 
 git init
 git branch -M main
@@ -75,7 +75,7 @@ git commit --allow-empty -m "chore: initialize repository"
 이미 프로젝트가 만들어져 있다면 다음처럼 이동한다.
 
 ```powershell
-cd C:\workspace\bive-learning
+cd C:\workspace\vibe-learning
 ```
 
 ## 5. Codex CLI 실행
@@ -335,7 +335,7 @@ git push origin main
 GitHub에서 비공개 저장소를 만든 후 다음 명령을 실행한다.
 
 ```powershell
-git remote add origin https://github.com/사용자명/bive-learning.git
+git remote add origin https://github.com/사용자명/vibe-learning.git
 git push -u origin main
 ```
 
@@ -380,4 +380,3 @@ API 키와 환경변수는 GitHub에 올리지 않는다.
 - 한국어 또는 영어 자막을 합법적으로 사용할 수 있음
 - 공식 문서로 내용을 교차 확인할 수 있음
 - 코드·설정·프롬프트를 실제로 검증할 수 있음
-

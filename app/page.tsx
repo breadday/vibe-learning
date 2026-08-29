@@ -24,8 +24,8 @@ export default function Home() {
   return (
     <main>
       <header className="site-header">
-        <a className="brand" href="#top" aria-label="Bive Learning 처음으로">
-          <span>B</span> Bive Learning
+        <a className="brand" href="#top" aria-label="Vibe Learning 처음으로">
+          <span>V</span> Vibe Learning
         </a>
         <span className="version">v0.1 · 첫 학습</span>
       </header>

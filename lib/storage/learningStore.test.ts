@@ -48,6 +48,25 @@ describe("learningStore", () => {
     expect(loadLearningStore()).toEqual(store);
   });
 
+  it("rejects invalid data before writing to browser storage", () => {
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    const invalidStore = {
+      ...populatedStore(),
+      videos: [
+        {
+          ...populatedStore().videos[0],
+          normalizedUrl: "https://www.youtube.com/watch?v=ZZZZZZZZZZZ",
+        },
+      ],
+    } as LearningStore;
+
+    expect(saveLearningStore(invalidStore)).toEqual({
+      ok: false,
+      reason: "invalid-data",
+    });
+    expect(setItem).not.toHaveBeenCalled();
+  });
+
   it.each([
     "not json",
     JSON.stringify({ schemaVersion: 2, videos: [], lastOpenedVideoId: null }),

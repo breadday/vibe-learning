@@ -31,3 +31,7 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build -- --webpack
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: End-to-end test
+        run: npm run test:e2e

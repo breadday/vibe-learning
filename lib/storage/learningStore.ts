@@ -62,7 +62,10 @@ export type LearningVideo = z.infer<typeof learningVideoSchema>;
 export type LearningStore = z.infer<typeof learningStoreSchema>;
 export type SaveLearningStoreResult =
   | { ok: true }
-  | { ok: false; reason: "quota-exceeded" | "storage-unavailable" };
+  | {
+    ok: false;
+    reason: "invalid-data" | "quota-exceeded" | "storage-unavailable";
+  };
 
 export function createEmptyLearningStore(): LearningStore {
   return {
@@ -98,12 +101,21 @@ export function loadLearningStore(): LearningStore {
 export function saveLearningStore(
   store: LearningStore,
 ): SaveLearningStoreResult {
+  const validatedStore = parseLearningStoreData(store);
+
+  if (validatedStore === null) {
+    return { ok: false, reason: "invalid-data" };
+  }
+
   if (typeof window === "undefined") {
     return { ok: false, reason: "storage-unavailable" };
   }
 
   try {
-    window.localStorage.setItem(learningStoreKey, JSON.stringify(store));
+    window.localStorage.setItem(
+      learningStoreKey,
+      JSON.stringify(validatedStore),
+    );
     window.dispatchEvent(new Event(learningStoreChangedEvent));
     return { ok: true };
   } catch (error) {

@@ -10,9 +10,9 @@ const videoIdPattern = /^[A-Za-z0-9_-]{11}$/;
 export type ParseYouTubeUrlResult =
   | { ok: true; videoId: string; normalizedUrl: string }
   | {
-      ok: false;
-      reason: "invalid-url" | "unsupported-host" | "invalid-video-id";
-    };
+    ok: false;
+    reason: "invalid-url" | "unsupported-host" | "invalid-video-id";
+  };
 
 export function parseYouTubeUrl(input: string): ParseYouTubeUrlResult {
   let url: URL;

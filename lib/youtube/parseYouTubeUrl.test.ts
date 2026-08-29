@@ -13,20 +13,42 @@ describe("parseYouTubeUrl", () => {
     `https://www.youtube.com/shorts/${videoId}`,
     `https://www.youtube.com/embed/${videoId}`,
   ])("normalizes a supported URL: %s", (input) => {
-    expect(parseYouTubeUrl(input)).toBe(standardUrl);
+    expect(parseYouTubeUrl(input)).toEqual({
+      ok: true,
+      videoId,
+      normalizedUrl: standardUrl,
+    });
   });
 
   it("trims surrounding whitespace", () => {
-    expect(parseYouTubeUrl(`  \n${standardUrl}\t `)).toBe(standardUrl);
+    expect(parseYouTubeUrl(`  \n${standardUrl}\t `)).toEqual({
+      ok: true,
+      videoId,
+      normalizedUrl: standardUrl,
+    });
+  });
+
+  it("accepts additional query parameters", () => {
+    expect(
+      parseYouTubeUrl(
+        `https://www.youtube.com/watch?feature=shared&v=${videoId}&t=30`,
+      ),
+    ).toEqual({ ok: true, videoId, normalizedUrl: standardUrl });
   });
 
   it.each([
-    `https://youtube.com.evil.com/watch?v=${videoId}`,
-    `https://fake-youtube.com/watch?v=${videoId}`,
-    `https://youtu.be/${videoId}/extra`,
-  ])("rejects a deceptive or unsupported location: %s", (input) => {
-    expect(parseYouTubeUrl(input)).toBeNull();
-  });
+    [
+      `https://youtube.com.evil.com/watch?v=${videoId}`,
+      "unsupported-host",
+    ],
+    [`https://fake-youtube.com/watch?v=${videoId}`, "unsupported-host"],
+    [`https://youtu.be/${videoId}/extra`, "invalid-video-id"],
+  ] as const)(
+    "rejects a deceptive or unsupported location: %s",
+    (input, reason) => {
+      expect(parseYouTubeUrl(input)).toEqual({ ok: false, reason });
+    },
+  );
 
   it.each([
     "https://www.youtube.com/watch",
@@ -35,14 +57,18 @@ describe("parseYouTubeUrl", () => {
     "https://www.youtube.com/shorts/ABCDEFGHIJKL",
     "https://www.youtube.com/embed/invalid.id!",
   ])("rejects a missing or invalid video ID: %s", (input) => {
-    expect(parseYouTubeUrl(input)).toBeNull();
+    expect(parseYouTubeUrl(input)).toEqual({
+      ok: false,
+      reason: "invalid-video-id",
+    });
   });
 
   it.each([
-    "not a URL",
-    `http://www.youtube.com/watch?v=${videoId}`,
-    `https://www.youtube.com/live/${videoId}`,
-  ])("rejects an invalid or unsupported URL: %s", (input) => {
-    expect(parseYouTubeUrl(input)).toBeNull();
+    ["not a URL", "invalid-url"],
+    ["   ", "invalid-url"],
+    [`http://www.youtube.com/watch?v=${videoId}`, "invalid-url"],
+    [`https://www.youtube.com/live/${videoId}`, "invalid-video-id"],
+  ] as const)("returns a specific failure reason: %s", (input, reason) => {
+    expect(parseYouTubeUrl(input)).toEqual({ ok: false, reason });
   });
 });

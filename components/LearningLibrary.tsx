@@ -1,7 +1,8 @@
 "use client";
 
-import { useReducer, useState, useSyncExternalStore } from "react";
+import { useEffect, useReducer, useState, useSyncExternalStore } from "react";
 import {
+  learningStoreChangedEvent,
   loadLearningStore,
   saveLearningStore,
   type LearningVideo,
@@ -12,6 +13,16 @@ export function LearningLibrary() {
   const isClient = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
   const [, refresh] = useReducer((value: number) => value + 1, 0);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleStoreChange = () => refresh();
+    window.addEventListener(learningStoreChangedEvent, handleStoreChange);
+    window.addEventListener("storage", handleStoreChange);
+    return () => {
+      window.removeEventListener(learningStoreChangedEvent, handleStoreChange);
+      window.removeEventListener("storage", handleStoreChange);
+    };
+  }, []);
 
   if (!isClient) {
     return <section className="learning-library" aria-label="학습 목록" />;

@@ -1,4 +1,5 @@
 import { AddVideoForm } from "@/components/AddVideoForm";
+import { BackupRestore } from "@/components/BackupRestore";
 import { LearningLibrary } from "@/components/LearningLibrary";
 
 export default function Home() {
@@ -20,6 +21,7 @@ export default function Home() {
         <AddVideoForm />
       </section>
       <LearningLibrary />
+      <BackupRestore />
     </main>
   );
 }

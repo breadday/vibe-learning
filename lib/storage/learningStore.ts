@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const learningStoreKey = "vibe-learning:v1";
+export const learningStoreChangedEvent = "vibe-learning:store-changed";
 
 const learningVideoSchema = z
   .object({
@@ -30,7 +31,32 @@ const learningStoreSchema = z
     videos: z.array(learningVideoSchema),
     lastOpenedVideoId: z.string().regex(/^[A-Za-z0-9_-]{11}$/).nullable(),
   })
-  .strict();
+  .strict()
+  .superRefine((store, context) => {
+    const videoIds = new Set<string>();
+
+    store.videos.forEach((video, index) => {
+      if (videoIds.has(video.youtubeId)) {
+        context.addIssue({
+          code: "custom",
+          path: ["videos", index, "youtubeId"],
+          message: "같은 YouTube 영상은 한 번만 저장할 수 있습니다.",
+        });
+      }
+      videoIds.add(video.youtubeId);
+    });
+
+    if (
+      store.lastOpenedVideoId !== null &&
+      !videoIds.has(store.lastOpenedVideoId)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["lastOpenedVideoId"],
+        message: "마지막으로 연 영상이 학습 목록에 있어야 합니다.",
+      });
+    }
+  });
 
 export type LearningVideo = z.infer<typeof learningVideoSchema>;
 export type LearningStore = z.infer<typeof learningStoreSchema>;
@@ -46,6 +72,11 @@ export function createEmptyLearningStore(): LearningStore {
   };
 }
 
+export function parseLearningStoreData(value: unknown): LearningStore | null {
+  const result = learningStoreSchema.safeParse(value);
+  return result.success ? result.data : null;
+}
+
 export function loadLearningStore(): LearningStore {
   if (typeof window === "undefined") {
     return createEmptyLearningStore();
@@ -58,8 +89,7 @@ export function loadLearningStore(): LearningStore {
       return createEmptyLearningStore();
     }
 
-    const result = learningStoreSchema.safeParse(JSON.parse(storedValue));
-    return result.success ? result.data : createEmptyLearningStore();
+    return parseLearningStoreData(JSON.parse(storedValue)) ?? createEmptyLearningStore();
   } catch {
     return createEmptyLearningStore();
   }
@@ -74,6 +104,7 @@ export function saveLearningStore(
 
   try {
     window.localStorage.setItem(learningStoreKey, JSON.stringify(store));
+    window.dispatchEvent(new Event(learningStoreChangedEvent));
     return { ok: true };
   } catch (error) {
     if (isQuotaExceededError(error)) {

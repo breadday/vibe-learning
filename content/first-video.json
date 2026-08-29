@@ -1,31 +1,143 @@
 {
   "schemaVersion": 1,
-  "verificationStatus": "pending",
+  "verificationStatus": "reviewed",
   "slug": "first-video",
   "video": {
-    "youtubeId": null,
-    "title": null,
-    "channel": null,
-    "publishedAt": null,
-    "durationSeconds": null,
-    "language": null,
-    "originalUrl": null
+    "youtubeId": "dKQQs-z_E64",
+    "title": "챗GPT 알뜰하게 본전 뽑는 방법 | 바이브코딩",
+    "channel": "코드깎는노인",
+    "publishedAt": "2026-08-21",
+    "durationSeconds": 827,
+    "language": "ko",
+    "originalUrl": "https://www.youtube.com/watch?v=dKQQs-z_E64"
   },
   "freshness": {
-    "status": "unverified",
-    "checkedAt": null,
-    "reason": "게시일과 영상 내용이 제공되지 않아 최신성을 판정하지 않았습니다."
+    "status": "review-needed",
+    "checkedAt": "2026-08-29",
+    "reason": "영상과 자동 자막은 확인했지만 ChatGPT의 MCP 기능과 플랜별 쓰기 권한은 빠르게 바뀌므로 실행 전에 공식 문서 재확인이 필요합니다."
   },
-  "segments": [],
-  "practiceSteps": [],
-  "copyBlocks": [],
-  "concepts": [],
-  "warnings": [],
-  "sources": [],
-  "todo": [
-    "실제 YouTube URL과 영상 ID 확인",
-    "영상 제목, 채널, 게시일, 길이, 원본 언어 확인",
-    "사용 가능한 자막 또는 영상 내용 제공",
-    "요약, 영상 구간, 실습, 프롬프트와 공식 출처 검수"
-  ]
+  "segments": [
+    {
+      "type": "required",
+      "startSeconds": 0,
+      "endSeconds": 170,
+      "title": "ChatGPT와 코딩 에이전트의 차이",
+      "reason": "대화형 답변과 로컬 파일·명령에 접근하는 에이전트 작업의 차이를 먼저 설명합니다."
+    },
+    {
+      "type": "required",
+      "startSeconds": 170,
+      "endSeconds": 320,
+      "title": "MCP 연결 구조와 권한",
+      "reason": "ChatGPT, 원격 MCP 서버, 작업용 컴퓨터가 어떤 관계로 연결되는지 보여줍니다."
+    },
+    {
+      "type": "optional",
+      "startSeconds": 320,
+      "endSeconds": 480,
+      "title": "블로그 구축과 배포 시연",
+      "reason": "파일 수정, 명령 실행, 데이터베이스 설정, 배포까지 이어지는 자동화 범위를 확인할 수 있습니다."
+    },
+    {
+      "type": "required",
+      "startSeconds": 480,
+      "endSeconds": 620,
+      "title": "민감정보 차단과 반복 개선",
+      "reason": "비밀번호 요청이 차단되는 사례와 기능을 단계적으로 개선하는 흐름을 함께 보여줍니다."
+    },
+    {
+      "type": "required",
+      "startSeconds": 620,
+      "endSeconds": 827,
+      "title": "읽기·쓰기·실행 도구와 검증 루프",
+      "reason": "코드 작성, 실행, 화면 확인, 수정, 재검증을 반복하는 것이 에이전트 경험의 핵심임을 정리합니다."
+    }
+  ],
+  "practiceSteps": [
+    {
+      "title": "현재 플랜과 권한 확인",
+      "instruction": "ChatGPT 공식 문서와 설정 화면에서 현재 계정이 허용하는 MCP 도구 범위가 읽기 전용인지 쓰기·실행까지 포함하는지 확인합니다."
+    },
+    {
+      "title": "격리된 실습 환경 설계",
+      "instruction": "개인 PC나 운영 서버 대신 삭제 가능한 테스트 환경을 정하고, 접근 가능한 폴더·명령·네트워크 범위를 최소화합니다."
+    },
+    {
+      "title": "읽기 전용으로 시작",
+      "instruction": "처음에는 시스템 정보와 샘플 파일을 읽는 도구만 허용하고 실제로 노출되는 데이터가 예상 범위인지 검토합니다."
+    },
+    {
+      "title": "변경 전 승인 경계 작성",
+      "instruction": "파일 수정, 패키지 설치, 명령 실행, 배포, 비밀정보 접근은 각각 언제 사람의 승인을 받을지 문서로 정합니다."
+    },
+    {
+      "title": "작은 데모로 검증",
+      "instruction": "가짜 데이터만 사용하는 작은 프로젝트에서 변경 내역과 로그를 검토하고, 환경을 폐기·복구할 수 있는지 확인합니다."
+    }
+  ],
+  "copyBlocks": [
+    {
+      "kind": "prompt",
+      "title": "MCP 연결 전 위험 검토",
+      "language": "text",
+      "content": "아직 설치하거나 시스템을 변경하지 마라. 다음 MCP 서버가 제공하는 도구와 권한을 읽기, 쓰기, 명령 실행, 네트워크, 비밀정보 접근으로 분류하라. 각 권한의 최악의 실패 사례, 최소 권한 설정, 사람의 승인이 필요한 지점, 격리된 테스트 절차와 복구 방법을 표로 작성하라. 확인되지 않은 기능은 추측하지 말고 TODO로 표시하라.\n\n[MCP 서버 문서 또는 도구 목록]"
+    },
+    {
+      "kind": "prompt",
+      "title": "읽기 전용 첫 점검",
+      "language": "text",
+      "content": "읽기 전용 도구만 사용하라. 파일 수정, 명령 실행, 설치, 배포, 외부 전송은 하지 마라. 현재 연결에서 접근 가능한 경로와 데이터 유형을 나열하고, 예상보다 넓은 권한이나 민감정보 노출 가능성이 있으면 즉시 중단해 보고하라."
+    }
+  ],
+  "concepts": [
+    {
+      "term": "MCP",
+      "description": "모델이 외부 시스템의 도구와 데이터에 연결되는 표준입니다. 실제 능력과 위험은 연결된 서버가 어떤 도구를 제공하는지에 따라 달라집니다."
+    },
+    {
+      "term": "코딩 에이전트",
+      "description": "코드 답변만 생성하는 것을 넘어 파일을 읽고 수정하며 명령과 테스트를 실행해 작업 결과를 검증하는 소프트웨어입니다."
+    },
+    {
+      "term": "최소 권한",
+      "description": "작업에 꼭 필요한 경로와 동작만 허용하는 보안 원칙입니다. 편의를 위해 광범위한 시스템 권한을 주는 것을 피합니다."
+    },
+    {
+      "term": "승인 경계",
+      "description": "읽기에서 쓰기, 실행, 배포처럼 영향이 커지는 순간 사람의 확인을 요구하도록 정한 기준입니다."
+    },
+    {
+      "term": "격리 환경",
+      "description": "문제가 생겨도 개인 파일이나 운영 서비스로 피해가 번지지 않도록 분리한 테스트 컴퓨터나 컨테이너입니다."
+    },
+    {
+      "term": "검증 루프",
+      "description": "결과를 만들고 실행한 뒤 실제 상태를 확인하고, 문제를 수정한 후 같은 조건으로 다시 검사하는 반복 과정입니다."
+    }
+  ],
+  "warnings": [
+    "영상 제작자는 고정 댓글에서 전체 MCP의 플랜별 지원 범위가 제한될 수 있다고 정정했습니다. 영상의 설정 화면만 따라 하지 말고 현재 OpenAI 공식 문서를 확인하세요.",
+    "원격 MCP에 파일 수정과 명령 실행 권한을 주면 연결된 컴퓨터 전체가 영향을 받을 수 있습니다. 개인 PC와 운영 서버에서 바로 실습하지 마세요.",
+    "SSH 키, API 키, 비밀번호, 인증 토큰을 채팅에 붙여 넣거나 저장소에 커밋하지 마세요.",
+    "모델이 민감한 요청을 차단하는 사례가 있더라도 그것을 유일한 보안 장치로 간주하면 안 됩니다. 서버 권한과 네트워크를 별도로 제한하세요.",
+    "YouTube 자동 생성 자막에는 ChatGPT, GitHub, MySQL, Playwright 같은 기술 용어의 오인식이 포함되어 있어 공식 표기로 바로잡았습니다."
+  ],
+  "sources": [
+    {
+      "type": "original",
+      "title": "원본 영상 — 코드깎는노인",
+      "url": "https://www.youtube.com/watch?v=dKQQs-z_E64"
+    },
+    {
+      "type": "official",
+      "title": "OpenAI Developers — Codex",
+      "url": "https://developers.openai.com/codex"
+    },
+    {
+      "type": "official",
+      "title": "OpenAI Developers — Plugins와 MCP",
+      "url": "https://developers.openai.com/plugins"
+    }
+  ],
+  "todo": []
 }

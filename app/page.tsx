@@ -18,8 +18,14 @@ function Section({ eyebrow, title, children }: { eyebrow: string; title: string;
 }
 
 export default function Home() {
-  const { video, segments, practiceSteps, copyBlocks, concepts, warnings, sources, todo } = firstVideo;
+  const { verificationStatus, freshness, video, segments, practiceSteps, copyBlocks, concepts, warnings, sources, todo } = firstVideo;
   const title = video.title ?? "첫 영상 제목 확인 대기";
+  const isReviewed = verificationStatus === "reviewed";
+  const freshnessLabel = freshness.status === "current"
+    ? `최신성 확인 · ${freshness.checkedAt}`
+    : freshness.status === "review-needed"
+      ? `최신성 재검토 필요 · ${freshness.checkedAt}`
+      : "최신성 미확인";
 
   return (
     <main>
@@ -33,8 +39,8 @@ export default function Home() {
       <article id="top" className="learning-page">
         <div className="hero-copy">
           <div className="status-row">
-            <span className="status-badge">검수 대기</span>
-            <span>최신성 미확인</span>
+            <span className="status-badge">{isReviewed ? "검수 완료" : "검수 대기"}</span>
+            <span>{freshnessLabel}</span>
           </div>
           <h1>{title}</h1>
           <p className="video-meta">
@@ -80,10 +86,12 @@ export default function Home() {
           </Section>
 
           <Section eyebrow="CAUTION" title="주의사항">
-            <WarningBox>
-              <strong>검증 전 콘텐츠입니다.</strong>
-              <p>영상 정보나 자막을 받기 전까지 요약·구간·프롬프트를 사실로 작성하지 않습니다.</p>
-            </WarningBox>
+            {!isReviewed && (
+              <WarningBox>
+                <strong>검증 전 콘텐츠입니다.</strong>
+                <p>영상 정보나 자막을 받기 전까지 요약·구간·프롬프트를 사실로 작성하지 않습니다.</p>
+              </WarningBox>
+            )}
             {warnings.map((warning) => <WarningBox key={warning}>{warning}</WarningBox>)}
           </Section>
 
@@ -91,11 +99,13 @@ export default function Home() {
             <SourceList sources={sources} />
           </Section>
 
-          <aside className="todo-panel">
-            <span className="eyebrow">NEXT INPUT</span>
-            <h2>완성을 위해 필요한 정보</h2>
-            <ul>{todo.map((item) => <li key={item}>{item}</li>)}</ul>
-          </aside>
+          {todo.length > 0 && (
+            <aside className="todo-panel">
+              <span className="eyebrow">NEXT INPUT</span>
+              <h2>완성을 위해 필요한 정보</h2>
+              <ul>{todo.map((item) => <li key={item}>{item}</li>)}</ul>
+            </aside>
+          )}
         </div>
       </article>
 

@@ -13,7 +13,7 @@ Run commands from the repository root. The available commands are:
 - `npm run typecheck` — validate TypeScript without emitting files.
 - `npm test` — run the configured test suite.
 - `npm run test:e2e` — run Playwright browser tests.
-- `npm run build` — verify a production build.
+- `npm run build -- --webpack` — verify a production build with webpack.
 
 Install dependencies with `npm ci` and install the local E2E browser once with `npx playwright install chromium`. Do not claim that checks pass unless the corresponding command was run successfully in the current workspace.
 

@@ -17,9 +17,11 @@ function video(
   return {
     youtubeId,
     title,
-    normalizedUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
-    status,
-    createdAt,
+  normalizedUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
+  status,
+  playbackSeconds: 0,
+  notes: [],
+  createdAt,
     updatedAt,
   };
 }

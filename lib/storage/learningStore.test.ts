@@ -4,6 +4,7 @@ import {
   learningStoreKey,
   loadLearningStore,
   saveLearningStore,
+  updateCurrentVideo,
   type LearningStore,
 } from "./learningStore";
 
@@ -18,6 +19,8 @@ function populatedStore(): LearningStore {
         title: "테스트 영상",
         normalizedUrl: `https://www.youtube.com/watch?v=${videoId}`,
         status: "not-started",
+        playbackSeconds: 0,
+        notes: [],
         createdAt: "2026-08-29T10:00:00.000Z",
         updatedAt: "2026-08-29T10:00:00.000Z",
       },
@@ -65,6 +68,63 @@ describe("learningStore", () => {
       reason: "invalid-data",
     });
     expect(setItem).not.toHaveBeenCalled();
+  });
+
+  it("applies defaults when loading legacy v1 video data", () => {
+    const legacyStore = populatedStore();
+    const legacyVideo = { ...legacyStore.videos[0] } as Partial<LearningStore["videos"][number]>;
+    delete legacyVideo.playbackSeconds;
+    delete legacyVideo.notes;
+    window.localStorage.setItem(
+      learningStoreKey,
+      JSON.stringify({ ...legacyStore, videos: [legacyVideo] }),
+    );
+
+    expect(loadLearningStore().videos[0]).toMatchObject({
+      playbackSeconds: 0,
+      notes: [],
+    });
+  });
+
+  it("updates only the selected video without mutating the source", () => {
+    const source = populatedStore();
+    const updated = updateCurrentVideo(
+      source,
+      videoId,
+      "2026-08-30T00:00:00.000Z",
+      (video) => ({ ...video, status: "in-progress" }),
+    );
+
+    expect(updated.videos[0]).toMatchObject({
+      status: "in-progress",
+      updatedAt: "2026-08-30T00:00:00.000Z",
+    });
+    expect(updated.lastOpenedVideoId).toBe(videoId);
+    expect(source.videos[0].status).toBe("not-started");
+  });
+
+  it.each([
+    { text: " ", reason: "blank note" },
+    { text: "a".repeat(2_001), reason: "long note" },
+  ])("rejects a $reason", ({ text }) => {
+    const store = populatedStore();
+    store.videos[0].notes = [note("00000000-0000-4000-8000-000000000001", text)];
+    expect(saveLearningStore(store)).toEqual({ ok: false, reason: "invalid-data" });
+  });
+
+  it("rejects more than 500 notes and duplicate note IDs", () => {
+    const tooMany = populatedStore();
+    tooMany.videos[0].notes = Array.from({ length: 501 }, (_, index) =>
+      note(`00000000-0000-4000-8000-${String(index).padStart(12, "0")}`, "메모"),
+    );
+    expect(saveLearningStore(tooMany)).toEqual({ ok: false, reason: "invalid-data" });
+
+    const duplicates = populatedStore();
+    duplicates.videos[0].notes = [
+      note("00000000-0000-4000-8000-000000000001", "첫 메모"),
+      note("00000000-0000-4000-8000-000000000001", "둘째 메모"),
+    ];
+    expect(saveLearningStore(duplicates)).toEqual({ ok: false, reason: "invalid-data" });
   });
 
   it.each([
@@ -124,3 +184,13 @@ describe("learningStore", () => {
     });
   });
 });
+
+function note(id: string, text: string) {
+  return {
+    id,
+    timestampSeconds: 0,
+    text,
+    createdAt: "2026-08-29T10:00:00.000Z",
+    updatedAt: "2026-08-29T10:00:00.000Z",
+  };
+}

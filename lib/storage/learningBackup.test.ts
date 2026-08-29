@@ -17,6 +17,8 @@ function video(
     title,
     normalizedUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
     status: "not-started",
+    playbackSeconds: 0,
+    notes: [],
     createdAt: "2026-08-01T00:00:00.000Z",
     updatedAt,
   };
@@ -71,5 +73,54 @@ describe("learningBackup", () => {
     expect(createBackupFilename(new Date(2026, 7, 29))).toBe(
       "vibe-learning-backup-2026-08-29.json",
     );
+  });
+
+  it("exports, imports, and merges notes with the newest video", () => {
+    const older = video("AAAAAAAAAAA", "이전 영상", "2026-08-01T00:00:00.000Z");
+    const newer = video("AAAAAAAAAAA", "최신 영상", "2026-08-03T00:00:00.000Z");
+    newer.playbackSeconds = 42;
+    newer.notes = [{
+      id: "00000000-0000-4000-8000-000000000001",
+      timestampSeconds: 42,
+      text: "백업 메모",
+      createdAt: "2026-08-03T00:00:00.000Z",
+      updatedAt: "2026-08-03T00:00:00.000Z",
+    }];
+
+    const backup = createLearningBackup(store([newer]));
+    expect(backup.ok).toBe(true);
+    if (!backup.ok) return;
+    expect(parseLearningBackup(backup.json)).toEqual({
+      ok: true,
+      store: store([newer]),
+    });
+    expect(mergeLearningStores(store([older]), store([newer])).videos[0])
+      .toEqual(newer);
+  });
+
+  it("imports a legacy v1 backup with note defaults", () => {
+    const legacyVideo = video(
+      "AAAAAAAAAAA",
+      "구형 백업 영상",
+      "2026-08-01T00:00:00.000Z",
+    );
+    const legacyFields = {
+      youtubeId: legacyVideo.youtubeId,
+      title: legacyVideo.title,
+      normalizedUrl: legacyVideo.normalizedUrl,
+      status: legacyVideo.status,
+      createdAt: legacyVideo.createdAt,
+      updatedAt: legacyVideo.updatedAt,
+    };
+
+    expect(parseLearningBackup(JSON.stringify({
+      schemaVersion: 1,
+      videos: [legacyFields],
+      lastOpenedVideoId: null,
+    })))
+      .toEqual({
+        ok: true,
+        store: store([legacyVideo]),
+      });
   });
 });

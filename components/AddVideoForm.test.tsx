@@ -88,6 +88,8 @@ describe("AddVideoForm", () => {
           title: "기존 영상",
           normalizedUrl: `https://www.youtube.com/watch?v=${videoId}`,
           status: "not-started",
+          playbackSeconds: 0,
+          notes: [],
           createdAt: timestamp,
           updatedAt: timestamp,
         },

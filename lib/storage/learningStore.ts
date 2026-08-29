@@ -3,12 +3,24 @@ import { z } from "zod";
 export const learningStoreKey = "vibe-learning:v1";
 export const learningStoreChangedEvent = "vibe-learning:store-changed";
 
+const learningNoteSchema = z
+  .object({
+    id: z.uuid(),
+    timestampSeconds: z.number().int().min(0),
+    text: z.string().trim().min(1).max(2_000),
+    createdAt: z.iso.datetime(),
+    updatedAt: z.iso.datetime(),
+  })
+  .strict();
+
 const learningVideoSchema = z
   .object({
     youtubeId: z.string().regex(/^[A-Za-z0-9_-]{11}$/),
     title: z.string().trim().min(1),
     normalizedUrl: z.url({ protocol: /^https$/ }),
     status: z.enum(["not-started", "in-progress", "completed"]),
+    playbackSeconds: z.number().int().min(0).default(0),
+    notes: z.array(learningNoteSchema).max(500).default([]),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
   })
@@ -23,6 +35,18 @@ const learningVideoSchema = z
         message: "정규화된 URL과 YouTube 영상 ID가 일치해야 합니다.",
       });
     }
+
+    const noteIds = new Set<string>();
+    video.notes.forEach((note, index) => {
+      if (noteIds.has(note.id)) {
+        context.addIssue({
+          code: "custom",
+          path: ["notes", index, "id"],
+          message: "같은 메모 ID는 한 영상에서 한 번만 사용할 수 있습니다.",
+        });
+      }
+      noteIds.add(note.id);
+    });
   });
 
 const learningStoreSchema = z
@@ -59,6 +83,7 @@ const learningStoreSchema = z
   });
 
 export type LearningVideo = z.infer<typeof learningVideoSchema>;
+export type LearningNote = z.infer<typeof learningNoteSchema>;
 export type LearningStore = z.infer<typeof learningStoreSchema>;
 export type SaveLearningStoreResult =
   | { ok: true }
@@ -125,6 +150,23 @@ export function saveLearningStore(
 
     return { ok: false, reason: "storage-unavailable" };
   }
+}
+
+export function updateCurrentVideo(
+  store: LearningStore,
+  videoId: string,
+  updatedAt: string,
+  update: (video: LearningVideo) => LearningVideo,
+): LearningStore {
+  return {
+    ...store,
+    videos: store.videos.map((video) =>
+      video.youtubeId === videoId
+        ? { ...update(video), updatedAt }
+        : video,
+    ),
+    lastOpenedVideoId: videoId,
+  };
 }
 
 function isQuotaExceededError(error: unknown): boolean {

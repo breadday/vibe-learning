@@ -97,6 +97,10 @@ export function BackupRestore() {
   const duplicateCount = previewStore?.videos.filter((video) =>
     currentIds.has(video.youtubeId),
   ).length ?? 0;
+  const noteCount = previewStore?.videos.reduce(
+    (total, video) => total + video.notes.length,
+    0,
+  ) ?? 0;
 
   return (
     <section className="backup-restore" aria-labelledby="backup-heading">
@@ -121,7 +125,7 @@ export function BackupRestore() {
         <div className="backup-preview" role="status">
           <strong>가져오기 미리보기</strong>
           <p>
-            영상 {previewStore.videos.length}개 · 현재 목록과 중복 {duplicateCount}개
+            영상 {previewStore.videos.length}개 · 메모 {noteCount}개 · 현재 목록과 중복 {duplicateCount}개
           </p>
           <div>
             <button type="button" onClick={() => handleRestore("merge")}>병합</button>

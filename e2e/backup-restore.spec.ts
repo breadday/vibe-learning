@@ -33,7 +33,7 @@ test("previews, merges, and overwrites valid JSON backups", async ({ page }) => 
   await page.reload();
 
   await uploadBackup(page, store([updatedVideo, mergedVideo], mergedVideo.youtubeId));
-  await expect(page.getByText("영상 2개 · 현재 목록과 중복 1개")).toBeVisible();
+  await expect(page.getByText("영상 2개 · 메모 2개 · 현재 목록과 중복 1개")).toBeVisible();
   await page.getByRole("button", { name: "병합" }).click();
   await expect(page.getByText("백업을 현재 학습 목록과 병합했습니다.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "병합된 최신 제목" }).first())
@@ -42,7 +42,7 @@ test("previews, merges, and overwrites valid JSON backups", async ({ page }) => 
     .toBeVisible();
 
   await uploadBackup(page, store([overwriteVideo], overwriteVideo.youtubeId));
-  await expect(page.getByText("영상 1개 · 현재 목록과 중복 0개")).toBeVisible();
+  await expect(page.getByText("영상 1개 · 메모 1개 · 현재 목록과 중복 0개")).toBeVisible();
   await page.getByRole("button", { name: "덮어쓰기" }).click();
   await expect(page.getByText("현재 학습 목록을 백업 데이터로 교체했습니다."))
     .toBeVisible();
@@ -51,8 +51,10 @@ test("previews, merges, and overwrites valid JSON backups", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "병합된 최신 제목" }))
     .toHaveCount(0);
 
+  await page.getByRole("link", { name: "학습 열기" }).first().click();
+  await expect(page.getByText("덮어쓰기로 복원한 영상 메모")).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("heading", { name: "덮어쓰기로 복원한 영상" }).first())
+  await expect(page.getByRole("heading", { name: "덮어쓰기로 복원한 영상" }))
     .toBeVisible();
 });
 
@@ -62,9 +64,22 @@ function video(youtubeId: string, title: string, updatedAt: string) {
     title,
     normalizedUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
     status: "not-started",
+    playbackSeconds: 0,
+    notes: [{
+      id: noteId(youtubeId),
+      timestampSeconds: 0,
+      text: `${title} 메모`,
+      createdAt: updatedAt,
+      updatedAt,
+    }],
     createdAt: "2026-08-28T00:00:00.000Z",
     updatedAt,
   };
+}
+
+function noteId(youtubeId: string) {
+  const suffix = youtubeId.charCodeAt(0).toString().padStart(12, "0");
+  return `00000000-0000-4000-8000-${suffix}`;
 }
 
 function store(videos: ReturnType<typeof video>[], lastOpenedVideoId: string) {

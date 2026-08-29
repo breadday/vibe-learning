@@ -14,6 +14,8 @@ function video(youtubeId: string, title: string, updatedAt: string): LearningVid
     title,
     normalizedUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
     status: "not-started",
+    playbackSeconds: 0,
+    notes: [],
     createdAt: "2026-08-01T00:00:00.000Z",
     updatedAt,
   };
@@ -56,7 +58,7 @@ describe("BackupRestore", () => {
       target: { files: [{ text: async () => JSON.stringify(incoming) }] },
     });
 
-    expect(await screen.findByText("영상 2개 · 현재 목록과 중복 1개")).toBeInTheDocument();
+    expect(await screen.findByText("영상 2개 · 메모 0개 · 현재 목록과 중복 1개")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "병합" }));
 
     await waitFor(() => {

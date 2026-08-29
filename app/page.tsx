@@ -1,4 +1,5 @@
 import { AddVideoForm } from "@/components/AddVideoForm";
+import { LearningLibrary } from "@/components/LearningLibrary";
 
 export default function Home() {
   return (
@@ -18,10 +19,7 @@ export default function Home() {
         </div>
         <AddVideoForm />
       </section>
-      <section className="next-steps" aria-label="다음 기능 안내">
-        <strong>등록 후 이어지는 학습 공간</strong>
-        <p>영상 플레이어와 학습 상태를 먼저 확인할 수 있습니다.</p>
-      </section>
+      <LearningLibrary />
     </main>
   );
 }

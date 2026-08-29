@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useSyncExternalStore } from "react";
+import { useReducer, useState, useSyncExternalStore } from "react";
 import {
   loadLearningStore,
+  saveLearningStore,
   type LearningVideo,
 } from "../lib/storage/learningStore";
 
@@ -17,9 +18,32 @@ const statusLabels = {
 export function LearningVideoDetail() {
   const { id } = useParams<{ id: string }>();
   const isClient = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
+  const [, refresh] = useReducer((value: number) => value + 1, 0);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const video: LearningVideo | null | undefined = isClient
     ? loadLearningStore().videos.find((item) => item.youtubeId === id) ?? null
     : undefined;
+
+  function handleStatusChange(status: LearningVideo["status"]) {
+    const store = loadLearningStore();
+    const saveResult = saveLearningStore({
+      ...store,
+      videos: store.videos.map((item) =>
+        item.youtubeId === id
+          ? { ...item, status, updatedAt: new Date().toISOString() }
+          : item,
+      ),
+      lastOpenedVideoId: id,
+    });
+
+    if (!saveResult.ok) {
+      setSaveError("학습 상태를 저장하지 못했습니다. 다시 시도해 주세요.");
+      return;
+    }
+
+    setSaveError(null);
+    refresh();
+  }
 
   if (video === undefined) {
     return <main className="detail-state" role="status">학습 영상을 불러오는 중입니다.</main>;
@@ -41,7 +65,21 @@ export function LearningVideoDetail() {
         <Link href="/">다른 영상 추가</Link>
       </header>
       <article>
-        <p className="context-label">{statusLabels[video.status]}</p>
+        <div className="detail-status-row">
+          <label htmlFor="learning-status">학습 상태</label>
+          <select
+            id="learning-status"
+            value={video.status}
+            onChange={(event) =>
+              handleStatusChange(event.target.value as LearningVideo["status"])
+            }
+          >
+            {Object.entries(statusLabels).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </div>
+        {saveError ? <p className="form-error" role="alert">{saveError}</p> : null}
         <h1>{video.title}</h1>
         <p className="saved-video-id">YouTube ID · {video.youtubeId}</p>
         <div className="saved-player">

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { LearningVideoDetail } from "./LearningVideoDetail";
+import { formatTimestamp, LearningVideoDetail } from "./LearningVideoDetail";
 import {
   learningStoreKey,
   type LearningStore,
@@ -81,5 +81,31 @@ describe("LearningVideoDetail", () => {
     render(<LearningVideoDetail />);
     expect(screen.getByRole("button", { name: "메모 추가" })).toBeDisabled();
     expect(screen.getByLabelText("메모 내용")).toHaveAttribute("maxlength", "2000");
+  });
+
+  it("shows the saved playback position as a clickable note timestamp", () => {
+    const store = JSON.parse(
+      window.localStorage.getItem(learningStoreKey) ?? "null",
+    ) as LearningStore;
+    store.videos[0].playbackSeconds = 763;
+    window.localStorage.setItem(learningStoreKey, JSON.stringify(store));
+
+    render(<LearningVideoDetail />);
+    fireEvent.change(screen.getByLabelText("메모 내용"), {
+      target: { value: "현재 위치 메모" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "메모 추가" }));
+
+    expect(
+      screen.getByRole("button", { name: "[12:43] 위치로 이동" }),
+    ).toBeInTheDocument();
+    const stored = JSON.parse(
+      window.localStorage.getItem(learningStoreKey) ?? "null",
+    ) as LearningStore;
+    expect(stored.videos[0].notes[0].timestampSeconds).toBe(763);
+  });
+
+  it("formats timestamps beyond one hour without losing minute padding", () => {
+    expect(formatTimestamp(3_723)).toBe("[1:02:03]");
   });
 });

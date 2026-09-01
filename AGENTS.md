@@ -27,7 +27,7 @@ Add unit and component tests alongside new behavior and name them `*.test.ts` or
 
 ## Commit & Pull Request Guidelines
 
-History currently uses Conventional Commits (`chore: initialize repository`); continue with prefixes such as `feat:`, `fix:`, `docs:`, and `test:`. Keep each commit scoped to one logical change. PRs should summarize the change, list verification commands and results, link relevant issues, and call out remaining TODOs or risks. Include before/after screenshots for visible UI changes, especially mobile layouts.
+History currently uses Conventional Commits (`chore: initialize repository`); continue with prefixes such as `feat:`, `fix:`, `docs:`, and `test:`, but write the commit description in Korean (for example, `feat: 학습 영상 재생 기능 추가`). Keep each commit scoped to one logical change. PRs should summarize the change, list verification commands and results, link relevant issues, and call out remaining TODOs or risks. Include before/after screenshots for visible UI changes, especially mobile layouts.
 
 ## Security & Content Integrity
 

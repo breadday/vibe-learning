@@ -1,0 +1,133 @@
+"use client";
+
+import Script from "next/script";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
+
+type Player = {
+  destroy: () => void;
+  getCurrentTime: () => number;
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+};
+
+type PlayerConstructor = new (
+  element: HTMLElement,
+  options: {
+    videoId: string;
+    playerVars: Record<string, number | string>;
+    events: {
+      onReady: () => void;
+      onStateChange: (event: { data: number }) => void;
+    };
+  },
+) => Player;
+
+declare global {
+  interface Window {
+    YT?: {
+      Player: PlayerConstructor;
+      PlayerState: { PAUSED: number; ENDED: number };
+    };
+  }
+}
+
+export type YouTubeLearningPlayerHandle = {
+  getCurrentTime: () => number;
+  seekTo: (seconds: number) => void;
+};
+
+type Props = {
+  videoId: string;
+  title: string;
+  initialSeconds: number;
+  onTimeUpdate: (seconds: number, shouldPersist: boolean) => void;
+};
+
+export const YouTubeLearningPlayer = forwardRef<YouTubeLearningPlayerHandle, Props>(
+  function YouTubeLearningPlayer(
+    { videoId, title, initialSeconds, onTimeUpdate },
+    ref,
+  ) {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const playerRef = useRef<Player | null>(null);
+    const onTimeUpdateRef = useRef(onTimeUpdate);
+    const lastPersistedSecondRef = useRef(initialSeconds);
+
+    useEffect(() => {
+      onTimeUpdateRef.current = onTimeUpdate;
+    }, [onTimeUpdate]);
+
+    const readCurrentTime = useCallback((shouldPersist: boolean) => {
+      const seconds = Math.max(
+        0,
+        Math.floor(playerRef.current?.getCurrentTime() ?? initialSeconds),
+      );
+      onTimeUpdateRef.current(seconds, shouldPersist);
+      if (shouldPersist) lastPersistedSecondRef.current = seconds;
+      return seconds;
+    }, [initialSeconds]);
+
+    function createPlayer() {
+      if (!containerRef.current || playerRef.current || !window.YT?.Player) return;
+
+      playerRef.current = new window.YT.Player(containerRef.current, {
+        videoId,
+        playerVars: {
+          enablejsapi: 1,
+          origin: window.location.origin,
+          playsinline: 1,
+          start: initialSeconds,
+        },
+        events: {
+          onReady: () => {
+            if (initialSeconds > 0) playerRef.current?.seekTo(initialSeconds, true);
+          },
+          onStateChange: (event) => {
+            const states = window.YT?.PlayerState;
+            if (states && (event.data === states.PAUSED || event.data === states.ENDED)) {
+              readCurrentTime(true);
+            }
+          },
+        },
+      });
+    }
+
+    useImperativeHandle(ref, () => ({
+      getCurrentTime: () => readCurrentTime(false),
+      seekTo: (seconds: number) => {
+        playerRef.current?.seekTo(seconds, true);
+        onTimeUpdateRef.current(seconds, false);
+      },
+    }));
+
+    useEffect(() => {
+      const interval = window.setInterval(() => {
+        if (!playerRef.current) return;
+        const seconds = readCurrentTime(false);
+        if (Math.abs(seconds - lastPersistedSecondRef.current) >= 5) {
+          readCurrentTime(true);
+        }
+      }, 1_000);
+      const persistBeforeLeaving = () => readCurrentTime(true);
+      window.addEventListener("pagehide", persistBeforeLeaving);
+
+      return () => {
+        window.clearInterval(interval);
+        window.removeEventListener("pagehide", persistBeforeLeaving);
+        readCurrentTime(true);
+        playerRef.current?.destroy();
+        playerRef.current = null;
+      };
+    }, [readCurrentTime]);
+
+    return (
+      <div className="saved-player" aria-label={`${title} 영상 플레이어`}>
+        <div ref={containerRef} />
+        <Script
+          src="https://www.youtube.com/iframe_api"
+          strategy="afterInteractive"
+          onReady={createPlayer}
+        />
+      </div>
+    );
+  },
+);

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { type FormEvent, useReducer, useState, useSyncExternalStore } from "react";
+import { type FormEvent, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import {
   loadLearningStore,
   saveLearningStore,
@@ -10,6 +10,7 @@ import {
   type LearningNote,
   type LearningVideo,
 } from "../lib/storage/learningStore";
+import { YouTubeLearningPlayer, type YouTubeLearningPlayerHandle } from "./YouTubeLearningPlayer";
 
 const statusLabels = {
   "not-started": "학습 전",
@@ -25,6 +26,7 @@ export function LearningVideoDetail() {
   const [noteText, setNoteText] = useState("");
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
+  const playerRef = useRef<YouTubeLearningPlayerHandle>(null);
   const video: LearningVideo | null | undefined = isClient
     ? loadLearningStore().videos.find((item) => item.youtubeId === id) ?? null
     : undefined;
@@ -77,7 +79,7 @@ export function LearningVideoDetail() {
     const now = new Date().toISOString();
     const note: LearningNote = {
       id: crypto.randomUUID(),
-      timestampSeconds: video.playbackSeconds,
+      timestampSeconds: playerRef.current?.getCurrentTime() ?? video.playbackSeconds,
       text,
       createdAt: now,
       updatedAt: now,
@@ -89,6 +91,11 @@ export function LearningVideoDetail() {
     }))) {
       setNoteText("");
     }
+  }
+
+  function handleTimeUpdate(seconds: number, shouldPersist: boolean) {
+    if (!shouldPersist || seconds === video?.playbackSeconds) return;
+    saveVideoUpdate((current) => ({ ...current, playbackSeconds: seconds }));
   }
 
   function handleSaveEdit(noteId: string) {
@@ -157,14 +164,13 @@ export function LearningVideoDetail() {
         {saveError ? <p className="form-error" role="alert">{saveError}</p> : null}
         <h1>{video.title}</h1>
         <p className="saved-video-id">YouTube ID · {video.youtubeId}</p>
-        <div className="saved-player">
-          <iframe
-            src={`https://www.youtube-nocookie.com/embed/${video.youtubeId}`}
-            title={video.title}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        </div>
+        <YouTubeLearningPlayer
+          ref={playerRef}
+          videoId={video.youtubeId}
+          title={video.title}
+          initialSeconds={video.playbackSeconds}
+          onTimeUpdate={handleTimeUpdate}
+        />
         <section className="personal-notes" aria-labelledby="personal-notes-heading">
           <div className="personal-notes-heading">
             <div>
@@ -222,6 +228,14 @@ export function LearningVideoDetail() {
                     </div>
                   ) : (
                     <>
+                      <button
+                        className="note-timestamp"
+                        type="button"
+                        aria-label={`${formatTimestamp(note.timestampSeconds)} 위치로 이동`}
+                        onClick={() => playerRef.current?.seekTo(note.timestampSeconds)}
+                      >
+                        {formatTimestamp(note.timestampSeconds)}
+                      </button>
                       <p>{note.text}</p>
                       <div className="note-actions">
                         <button
@@ -247,6 +261,17 @@ export function LearningVideoDetail() {
       </article>
     </main>
   );
+}
+
+export function formatTimestamp(totalSeconds: number) {
+  const seconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(seconds / 3_600);
+  const minutes = Math.floor((seconds % 3_600) / 60);
+  const remainder = String(seconds % 60).padStart(2, "0");
+
+  return hours > 0
+    ? `[${hours}:${String(minutes).padStart(2, "0")}:${remainder}]`
+    : `[${minutes}:${remainder}]`;
 }
 
 function subscribe() {

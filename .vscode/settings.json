@@ -1,0 +1,10 @@
+{
+  "python.envFile": "${workspaceFolder}/.env",
+  "python.terminal.useEnvFile": true,
+  "github.copilot.chat.localeOverride": "ko",
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    {
+      "text": "Use Conventional Commits with an English type and write the description in Korean. Example: feat: 학습 영상 재생 기능 추가"
+    }
+  ]
+}

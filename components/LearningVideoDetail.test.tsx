@@ -151,8 +151,8 @@ describe("LearningVideoDetail", () => {
     fireEvent.click(screen.getByRole("button", { name: "YouTube에서 학습하기" }));
 
     expect(screen.queryByLabelText("테스트 영상 플레이어")).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "이 영상은 YouTube에서 재생합니다." }))
-      .toBeInTheDocument();
+    expect(screen.getByLabelText("외부 재생 도구")).toBeInTheDocument();
+    expect(document.querySelector(".detail-player-column")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "YouTube에서 보기" }))
       .toHaveAttribute("href", `https://www.youtube.com/watch?v=${videoId}`);
   });

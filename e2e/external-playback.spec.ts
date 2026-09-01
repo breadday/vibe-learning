@@ -12,8 +12,7 @@ test("learns with a manually saved position in external playback mode", async ({
   await expect(page.getByTitle("외부 재생 학습 영상 영상 플레이어")).toBeVisible();
   await page.getByRole("button", { name: "YouTube에서 학습하기" }).click();
   await expect(page.getByTitle("외부 재생 학습 영상 영상 플레이어")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "이 영상은 YouTube에서 재생합니다." }))
-    .toBeVisible();
+  await expect(page.getByLabel("외부 재생 도구")).toBeVisible();
 
   await page.getByLabel("마지막 학습 위치").fill("12:43");
   await page.getByRole("button", { name: "위치 저장" }).click();
@@ -24,6 +23,11 @@ test("learns with a manually saved position in external playback mode", async ({
   await page.getByRole("button", { name: "메모 저장" }).click();
   await expect(page.getByRole("button", { name: "[12:43] 위치로 이동" })).toBeVisible();
 
+  await page.getByRole("button", { name: "수정" }).click();
+  await page.getByLabel("메모 수정 내용").fill("수정한 외부 재생 메모");
+  await page.getByRole("button", { name: "저장", exact: true }).click();
+  await expect(page.getByText("수정한 외부 재생 메모")).toBeVisible();
+
   const stored = await page.evaluate(() => JSON.parse(
     window.localStorage.getItem("vibe-learning:v1") ?? "null",
   ));
@@ -33,4 +37,8 @@ test("learns with a manually saved position in external playback mode", async ({
   });
   expect(stored.videos[0].notes[0].timestampSeconds).toBe(763);
   expect(stored.lastOpenedVideoId).toBe(videoId);
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "삭제" }).click();
+  await expect(page.getByText("아직 작성한 개인 메모가 없습니다.")).toBeVisible();
 });

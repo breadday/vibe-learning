@@ -181,7 +181,7 @@ export function LearningVideoDetail() {
         <Link className="brand" href="/"><span>V</span> Vibe Learning</Link>
         <Link href="/">다른 영상 추가</Link>
       </header>
-      <article className="detail-layout">
+      <article className={`detail-layout ${video.playbackMode === "external" ? "external-detail-layout" : ""}`}>
         <div className="detail-title">
           <p className="context-label">YouTube 학습</p>
           <h1>{video.title}</h1>
@@ -201,28 +201,26 @@ export function LearningVideoDetail() {
           </select>
         </div>
         {saveError ? <p className="form-error" role="alert">{saveError}</p> : null}
-        <div className="detail-player-column">
-          {video.playbackMode === "embedded" ? (
-            <>
-              <YouTubeLearningPlayer
-                ref={playerRef}
-                videoId={video.youtubeId}
-                title={video.title}
-                initialSeconds={video.playbackSeconds}
-                onTimeUpdate={handleTimeUpdate}
-              />
-              <button
-                className="playback-mode-button"
-                type="button"
-                onClick={() => handlePlaybackModeChange("external")}
-              >
-                YouTube에서 학습하기
-              </button>
-            </>
-          ) : (
-            <section className="external-playback" aria-labelledby="external-playback-heading">
-              <p className="context-label">외부 재생 모드</p>
-              <h2 id="external-playback-heading">이 영상은 YouTube에서 재생합니다.</h2>
+        {video.playbackMode === "embedded" ? (
+          <div className="detail-player-column">
+            <YouTubeLearningPlayer
+              ref={playerRef}
+              videoId={video.youtubeId}
+              title={video.title}
+              initialSeconds={video.playbackSeconds}
+              onTimeUpdate={handleTimeUpdate}
+            />
+            <button
+              className="playback-mode-button"
+              type="button"
+              onClick={() => handlePlaybackModeChange("external")}
+            >
+              YouTube에서 학습하기
+            </button>
+          </div>
+        ) : (
+          <section className="external-playback" aria-label="외부 재생 도구">
+            <div className="external-watch-action">
               <a
                 className="youtube-watch-button"
                 href={createYouTubeWatchUrl(video.youtubeId, video.playbackSeconds)}
@@ -231,33 +229,34 @@ export function LearningVideoDetail() {
               >
                 YouTube에서 보기
               </a>
-              <form className="manual-time-form" onSubmit={handleManualTimeSave}>
-                <label htmlFor="manual-playback-time">마지막 학습 위치</label>
-                <div>
-                  <input
-                    id="manual-playback-time"
-                    value={manualTimeInput ?? formatTimeInput(video.playbackSeconds)}
-                    onChange={(event) => setManualTimeInput(event.target.value)}
-                    inputMode="numeric"
-                    placeholder="12:43"
-                    aria-describedby="manual-time-help"
-                    aria-invalid={manualTimeError !== null}
-                  />
-                  <button type="submit">위치 저장</button>
-                </div>
-                <small id="manual-time-help">분:초 또는 시:분:초</small>
-                {manualTimeError ? <p className="form-error" role="alert">{manualTimeError}</p> : null}
-              </form>
-              <button
-                className="playback-mode-button"
-                type="button"
-                onClick={() => handlePlaybackModeChange("embedded")}
-              >
-                앱에서 재생 시도
-              </button>
-            </section>
-          )}
-        </div>
+              <small>YouTube가 새 탭에서 열립니다.</small>
+            </div>
+            <form className="manual-time-form" onSubmit={handleManualTimeSave}>
+              <label htmlFor="manual-playback-time">마지막 학습 위치</label>
+              <div>
+                <input
+                  id="manual-playback-time"
+                  value={manualTimeInput ?? formatTimeInput(video.playbackSeconds)}
+                  onChange={(event) => setManualTimeInput(event.target.value)}
+                  inputMode="numeric"
+                  placeholder="12:43"
+                  aria-describedby="manual-time-help"
+                  aria-invalid={manualTimeError !== null}
+                />
+                <button type="submit">위치 저장</button>
+              </div>
+              <small id="manual-time-help">분:초 또는 시:분:초</small>
+              {manualTimeError ? <p className="form-error" role="alert">{manualTimeError}</p> : null}
+            </form>
+            <button
+              className="playback-mode-button"
+              type="button"
+              onClick={() => handlePlaybackModeChange("embedded")}
+            >
+              앱에서 재생 시도
+            </button>
+          </section>
+        )}
         <section className="personal-notes" aria-labelledby="personal-notes-heading">
           <div className="personal-notes-heading">
             <h2 id="personal-notes-heading">개인 메모</h2>

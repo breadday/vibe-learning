@@ -19,6 +19,7 @@ function video(
     title,
   normalizedUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
   status,
+  playbackMode: "embedded",
   playbackSeconds: 0,
   notes: [],
   createdAt,

@@ -14,6 +14,7 @@ function video(youtubeId: string, title: string, updatedAt: string): LearningVid
     title,
     normalizedUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
     status: "not-started",
+    playbackMode: "embedded",
     playbackSeconds: 0,
     notes: [],
     createdAt: "2026-08-01T00:00:00.000Z",

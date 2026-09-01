@@ -38,8 +38,12 @@ test("has no horizontal overflow at 360px on home and detail pages", async ({
   await page.getByRole("link", { name: "학습 열기" }).first().click();
   await expect(page).toHaveURL(`/videos/${youtubeId}`);
   await page.getByLabel("메모 내용").fill("가로로 아주 긴 문자열도 화면을 밀어내지 않는지 확인하는 360px 개인 메모");
-  await page.getByRole("button", { name: "메모 추가" }).click();
+  await page.getByRole("button", { name: "메모 저장" }).click();
   await expect(page.getByText(/가로로 아주 긴 문자열/)).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await page.getByRole("button", { name: "YouTube에서 학습하기" }).click();
+  await expect(page.getByRole("link", { name: "YouTube에서 보기" })).toBeVisible();
+  await page.getByLabel("마지막 학습 위치").fill("12:43");
   await expectNoHorizontalOverflow(page);
   await page.screenshot({ path: testInfo.outputPath("mobile-detail.png"), fullPage: true });
 });

@@ -19,6 +19,7 @@ const learningVideoSchema = z
     title: z.string().trim().min(1),
     normalizedUrl: z.url({ protocol: /^https$/ }),
     status: z.enum(["not-started", "in-progress", "completed"]),
+    playbackMode: z.enum(["embedded", "external"]).default("embedded"),
     playbackSeconds: z.number().int().min(0).default(0),
     notes: z.array(learningNoteSchema).max(500).default([]),
     createdAt: z.iso.datetime(),

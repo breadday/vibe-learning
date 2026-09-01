@@ -17,6 +17,7 @@ function video(
     title,
     normalizedUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
     status: "not-started",
+    playbackMode: "embedded",
     playbackSeconds: 0,
     notes: [],
     createdAt: "2026-08-01T00:00:00.000Z",
@@ -78,6 +79,7 @@ describe("learningBackup", () => {
   it("exports, imports, and merges notes with the newest video", () => {
     const older = video("AAAAAAAAAAA", "이전 영상", "2026-08-01T00:00:00.000Z");
     const newer = video("AAAAAAAAAAA", "최신 영상", "2026-08-03T00:00:00.000Z");
+    newer.playbackMode = "external";
     newer.playbackSeconds = 42;
     newer.notes = [{
       id: "00000000-0000-4000-8000-000000000001",

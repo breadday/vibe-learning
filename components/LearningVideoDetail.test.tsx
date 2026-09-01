@@ -7,12 +7,31 @@ import {
 } from "../lib/storage/learningStore";
 
 const videoId = "ABCDEFGHIJK";
+const seekTo = vi.hoisted(() => vi.fn());
+
+vi.mock("./YouTubeLearningPlayer", async () => {
+  const React = await import("react");
+
+  return {
+    YouTubeLearningPlayer: React.forwardRef(function MockPlayer(
+      { initialSeconds }: { initialSeconds: number },
+      ref: React.ForwardedRef<{ getCurrentTime: () => number; seekTo: (seconds: number) => void }>,
+    ) {
+      React.useImperativeHandle(ref, () => ({
+        getCurrentTime: () => initialSeconds,
+        seekTo,
+      }));
+      return <div aria-label="테스트 영상 플레이어" />;
+    }),
+  };
+});
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: videoId }),
 }));
 
 beforeEach(() => {
+  seekTo.mockClear();
   const store: LearningStore = {
     schemaVersion: 1,
     videos: [
@@ -21,6 +40,7 @@ beforeEach(() => {
         title: "상태를 바꿀 영상",
         normalizedUrl: `https://www.youtube.com/watch?v=${videoId}`,
         status: "not-started",
+        playbackMode: "embedded",
         playbackSeconds: 0,
         notes: [],
         createdAt: "2026-08-01T00:00:00.000Z",
@@ -63,7 +83,7 @@ describe("LearningVideoDetail", () => {
     fireEvent.change(screen.getByLabelText("메모 내용"), {
       target: { value: "  처음 메모  " },
     });
-    fireEvent.click(screen.getByRole("button", { name: "메모 추가" }));
+    fireEvent.click(screen.getByRole("button", { name: "메모 저장" }));
     expect(screen.getByText("처음 메모")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "수정" }));
@@ -79,7 +99,7 @@ describe("LearningVideoDetail", () => {
 
   it("disables blank notes and exposes the 2,000 character limit", () => {
     render(<LearningVideoDetail />);
-    expect(screen.getByRole("button", { name: "메모 추가" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "메모 저장" })).toBeDisabled();
     expect(screen.getByLabelText("메모 내용")).toHaveAttribute("maxlength", "2000");
   });
 
@@ -94,7 +114,7 @@ describe("LearningVideoDetail", () => {
     fireEvent.change(screen.getByLabelText("메모 내용"), {
       target: { value: "현재 위치 메모" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "메모 추가" }));
+    fireEvent.click(screen.getByRole("button", { name: "메모 저장" }));
 
     expect(
       screen.getByRole("button", { name: "[12:43] 위치로 이동" }),
@@ -103,6 +123,96 @@ describe("LearningVideoDetail", () => {
       window.localStorage.getItem(learningStoreKey) ?? "null",
     ) as LearningStore;
     expect(stored.videos[0].notes[0].timestampSeconds).toBe(763);
+  });
+
+  it("seeks to the note timestamp when its accessible button is clicked", () => {
+    const store = JSON.parse(
+      window.localStorage.getItem(learningStoreKey) ?? "null",
+    ) as LearningStore;
+    store.videos[0].notes = [{
+      id: "123e4567-e89b-42d3-a456-426614174000",
+      timestampSeconds: 185,
+      text: "다시 볼 부분",
+      createdAt: "2026-08-01T00:00:00.000Z",
+      updatedAt: "2026-08-01T00:00:00.000Z",
+    }];
+    window.localStorage.setItem(learningStoreKey, JSON.stringify(store));
+
+    render(<LearningVideoDetail />);
+    fireEvent.click(screen.getByRole("button", { name: "[3:05] 위치로 이동" }));
+
+    expect(seekTo).toHaveBeenCalledWith(185);
+  });
+
+  it("switches from the existing embedded player to the external workspace", () => {
+    render(<LearningVideoDetail />);
+    expect(screen.getByLabelText("테스트 영상 플레이어")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "YouTube에서 학습하기" }));
+
+    expect(screen.queryByLabelText("테스트 영상 플레이어")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "이 영상은 YouTube에서 재생합니다." }))
+      .toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "YouTube에서 보기" }))
+      .toHaveAttribute("href", `https://www.youtube.com/watch?v=${videoId}`);
+  });
+
+  it("saves an external position and uses it for a new note", () => {
+    const store = JSON.parse(
+      window.localStorage.getItem(learningStoreKey) ?? "null",
+    ) as LearningStore;
+    store.videos[0].playbackMode = "external";
+    window.localStorage.setItem(learningStoreKey, JSON.stringify(store));
+
+    render(<LearningVideoDetail />);
+    fireEvent.change(screen.getByLabelText("마지막 학습 위치"), {
+      target: { value: "12:43" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "위치 저장" }));
+    fireEvent.change(screen.getByLabelText("메모 내용"), {
+      target: { value: "외부 재생 메모" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "메모 저장" }));
+
+    const saved = JSON.parse(
+      window.localStorage.getItem(learningStoreKey) ?? "null",
+    ) as LearningStore;
+    expect(saved.videos[0].playbackSeconds).toBe(763);
+    expect(saved.videos[0].notes[0].timestampSeconds).toBe(763);
+    expect(saved.videos[0].updatedAt).not.toBe("2026-08-01T00:00:00.000Z");
+    expect(saved.lastOpenedVideoId).toBe(videoId);
+    expect(screen.getByRole("link", { name: "YouTube에서 보기" }))
+      .toHaveAttribute("href", `https://www.youtube.com/watch?v=${videoId}&t=763s`);
+  });
+
+  it("rejects an invalid external time and opens note timestamps on YouTube", () => {
+    const store = JSON.parse(
+      window.localStorage.getItem(learningStoreKey) ?? "null",
+    ) as LearningStore;
+    store.videos[0].playbackMode = "external";
+    store.videos[0].notes = [{
+      id: "123e4567-e89b-42d3-a456-426614174000",
+      timestampSeconds: 1_100,
+      text: "다시 볼 부분",
+      createdAt: "2026-08-01T00:00:00.000Z",
+      updatedAt: "2026-08-01T00:00:00.000Z",
+    }];
+    window.localStorage.setItem(learningStoreKey, JSON.stringify(store));
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+
+    render(<LearningVideoDetail />);
+    fireEvent.change(screen.getByLabelText("마지막 학습 위치"), {
+      target: { value: "-1:20" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "위치 저장" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("올바른 시간을 입력");
+
+    fireEvent.click(screen.getByRole("button", { name: "[18:20] 위치로 이동" }));
+    expect(open).toHaveBeenCalledWith(
+      `https://www.youtube.com/watch?v=${videoId}&t=1100s`,
+      "_blank",
+      "noopener,noreferrer",
+    );
   });
 
   it("formats timestamps beyond one hour without losing minute padding", () => {

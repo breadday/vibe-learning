@@ -10,7 +10,7 @@ test("adds, persists, edits, and deletes a personal note", async ({ page }) => {
   await page.getByRole("button", { name: "학습에 추가" }).click();
 
   await page.getByLabel("메모 내용").fill("  새로고침할 메모  ");
-  await page.getByRole("button", { name: "메모 추가" }).click();
+  await page.getByRole("button", { name: "메모 저장" }).click();
   await expect(page.getByText("새로고침할 메모")).toBeVisible();
   await expect(page.getByText("1/500")).toBeVisible();
 
@@ -18,7 +18,7 @@ test("adds, persists, edits, and deletes a personal note", async ({ page }) => {
   await expect(page.getByText("새로고침할 메모")).toBeVisible();
   await page.getByRole("button", { name: "수정" }).click();
   await page.getByLabel("메모 수정 내용").fill("수정 후 유지되는 메모");
-  await page.getByRole("button", { name: "저장" }).click();
+  await page.getByRole("button", { name: "저장", exact: true }).click();
   await expect(page.getByText("수정 후 유지되는 메모")).toBeVisible();
 
   page.once("dialog", (dialog) => dialog.accept());

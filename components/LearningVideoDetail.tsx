@@ -10,6 +10,11 @@ import {
   type LearningNote,
   type LearningVideo,
 } from "../lib/storage/learningStore";
+import {
+  createYouTubeWatchUrl,
+  formatTimeInput,
+  parseTimeInput,
+} from "../lib/youtube/youtubePlayback";
 import { YouTubeLearningPlayer, type YouTubeLearningPlayerHandle } from "./YouTubeLearningPlayer";
 
 const statusLabels = {
@@ -24,6 +29,9 @@ export function LearningVideoDetail() {
   const [, refresh] = useReducer((value: number) => value + 1, 0);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
+  const [currentSeconds, setCurrentSeconds] = useState<number | null>(null);
+  const [manualTimeInput, setManualTimeInput] = useState<string | null>(null);
+  const [manualTimeError, setManualTimeError] = useState<string | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const playerRef = useRef<YouTubeLearningPlayerHandle>(null);
@@ -79,7 +87,9 @@ export function LearningVideoDetail() {
     const now = new Date().toISOString();
     const note: LearningNote = {
       id: crypto.randomUUID(),
-      timestampSeconds: playerRef.current?.getCurrentTime() ?? video.playbackSeconds,
+      timestampSeconds: video.playbackMode === "external"
+        ? video.playbackSeconds
+        : playerRef.current?.getCurrentTime() ?? video.playbackSeconds,
       text,
       createdAt: now,
       updatedAt: now,
@@ -93,7 +103,32 @@ export function LearningVideoDetail() {
     }
   }
 
+  function handlePlaybackModeChange(playbackMode: LearningVideo["playbackMode"]) {
+    if (saveVideoUpdate((current) => ({ ...current, playbackMode }))) {
+      setCurrentSeconds(null);
+      setManualTimeInput(null);
+      setManualTimeError(null);
+    }
+  }
+
+  function handleManualTimeSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!video) return;
+
+    const seconds = parseTimeInput(manualTimeInput ?? formatTimeInput(video.playbackSeconds));
+    if (seconds === null) {
+      setManualTimeError("분:초 또는 시:분:초 형식으로 올바른 시간을 입력해 주세요.");
+      return;
+    }
+
+    if (saveVideoUpdate((current) => ({ ...current, playbackSeconds: seconds }))) {
+      setManualTimeInput(formatTimeInput(seconds));
+      setManualTimeError(null);
+    }
+  }
+
   function handleTimeUpdate(seconds: number, shouldPersist: boolean) {
+    setCurrentSeconds(seconds);
     if (!shouldPersist || seconds === video?.playbackSeconds) return;
     saveVideoUpdate((current) => ({ ...current, playbackSeconds: seconds }));
   }
@@ -146,7 +181,11 @@ export function LearningVideoDetail() {
         <Link className="brand" href="/"><span>V</span> Vibe Learning</Link>
         <Link href="/">다른 영상 추가</Link>
       </header>
-      <article>
+      <article className="detail-layout">
+        <div className="detail-title">
+          <p className="context-label">YouTube 학습</p>
+          <h1>{video.title}</h1>
+        </div>
         <div className="detail-status-row">
           <label htmlFor="learning-status">학습 상태</label>
           <select
@@ -162,32 +201,85 @@ export function LearningVideoDetail() {
           </select>
         </div>
         {saveError ? <p className="form-error" role="alert">{saveError}</p> : null}
-        <h1>{video.title}</h1>
-        <p className="saved-video-id">YouTube ID · {video.youtubeId}</p>
-        <YouTubeLearningPlayer
-          ref={playerRef}
-          videoId={video.youtubeId}
-          title={video.title}
-          initialSeconds={video.playbackSeconds}
-          onTimeUpdate={handleTimeUpdate}
-        />
+        <div className="detail-player-column">
+          {video.playbackMode === "embedded" ? (
+            <>
+              <YouTubeLearningPlayer
+                ref={playerRef}
+                videoId={video.youtubeId}
+                title={video.title}
+                initialSeconds={video.playbackSeconds}
+                onTimeUpdate={handleTimeUpdate}
+              />
+              <button
+                className="playback-mode-button"
+                type="button"
+                onClick={() => handlePlaybackModeChange("external")}
+              >
+                YouTube에서 학습하기
+              </button>
+            </>
+          ) : (
+            <section className="external-playback" aria-labelledby="external-playback-heading">
+              <p className="context-label">외부 재생 모드</p>
+              <h2 id="external-playback-heading">이 영상은 YouTube에서 재생합니다.</h2>
+              <a
+                className="youtube-watch-button"
+                href={createYouTubeWatchUrl(video.youtubeId, video.playbackSeconds)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                YouTube에서 보기
+              </a>
+              <form className="manual-time-form" onSubmit={handleManualTimeSave}>
+                <label htmlFor="manual-playback-time">마지막 학습 위치</label>
+                <div>
+                  <input
+                    id="manual-playback-time"
+                    value={manualTimeInput ?? formatTimeInput(video.playbackSeconds)}
+                    onChange={(event) => setManualTimeInput(event.target.value)}
+                    inputMode="numeric"
+                    placeholder="12:43"
+                    aria-describedby="manual-time-help"
+                    aria-invalid={manualTimeError !== null}
+                  />
+                  <button type="submit">위치 저장</button>
+                </div>
+                <small id="manual-time-help">분:초 또는 시:분:초</small>
+                {manualTimeError ? <p className="form-error" role="alert">{manualTimeError}</p> : null}
+              </form>
+              <button
+                className="playback-mode-button"
+                type="button"
+                onClick={() => handlePlaybackModeChange("embedded")}
+              >
+                앱에서 재생 시도
+              </button>
+            </section>
+          )}
+        </div>
         <section className="personal-notes" aria-labelledby="personal-notes-heading">
           <div className="personal-notes-heading">
-            <div>
-              <p className="context-label">이 브라우저에만 저장</p>
-              <h2 id="personal-notes-heading">개인 메모</h2>
-            </div>
+            <h2 id="personal-notes-heading">개인 메모</h2>
             <span>{video.notes.length}/500</span>
           </div>
           <form className="note-form" onSubmit={handleAddNote}>
-            <label htmlFor="new-note">메모 내용</label>
+            <div className="note-position" aria-live="polite">
+              현재 위치 <strong>{formatTimestamp(
+                video.playbackMode === "external"
+                  ? video.playbackSeconds
+                  : currentSeconds ?? video.playbackSeconds,
+              )}</strong>
+              <span>에 저장됩니다</span>
+            </div>
+            <label className="sr-only" htmlFor="new-note">메모 내용</label>
             <textarea
               id="new-note"
               value={noteText}
               onChange={(event) => setNoteText(event.target.value)}
               maxLength={2_000}
-              rows={4}
-              placeholder="영상에서 기억할 내용을 적어 두세요"
+              rows={3}
+              placeholder="메모를 입력하세요"
             />
             <div>
               <small>{noteText.length}/2,000자</small>
@@ -195,7 +287,7 @@ export function LearningVideoDetail() {
                 type="submit"
                 disabled={noteText.trim().length === 0 || video.notes.length >= 500}
               >
-                메모 추가
+                메모 저장
               </button>
             </div>
           </form>
@@ -215,7 +307,7 @@ export function LearningVideoDetail() {
                         value={editingText}
                         onChange={(event) => setEditingText(event.target.value)}
                         maxLength={2_000}
-                        rows={4}
+                        rows={3}
                       />
                       <div className="note-actions">
                         <button type="button" onClick={() => handleSaveEdit(note.id)}>
@@ -232,7 +324,17 @@ export function LearningVideoDetail() {
                         className="note-timestamp"
                         type="button"
                         aria-label={`${formatTimestamp(note.timestampSeconds)} 위치로 이동`}
-                        onClick={() => playerRef.current?.seekTo(note.timestampSeconds)}
+                        onClick={() => {
+                          if (video.playbackMode === "external") {
+                            window.open(
+                              createYouTubeWatchUrl(video.youtubeId, note.timestampSeconds),
+                              "_blank",
+                              "noopener,noreferrer",
+                            );
+                          } else {
+                            playerRef.current?.seekTo(note.timestampSeconds);
+                          }
+                        }}
                       >
                         {formatTimestamp(note.timestampSeconds)}
                       </button>
@@ -258,6 +360,7 @@ export function LearningVideoDetail() {
             </ol>
           )}
         </section>
+        <p className="saved-video-id">YouTube 영상 · {video.youtubeId}</p>
       </article>
     </main>
   );

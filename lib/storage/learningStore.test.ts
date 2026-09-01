@@ -19,6 +19,7 @@ function populatedStore(): LearningStore {
         title: "테스트 영상",
         normalizedUrl: `https://www.youtube.com/watch?v=${videoId}`,
         status: "not-started",
+        playbackMode: "embedded",
         playbackSeconds: 0,
         notes: [],
         createdAt: "2026-08-29T10:00:00.000Z",
@@ -81,6 +82,7 @@ describe("learningStore", () => {
     );
 
     expect(loadLearningStore().videos[0]).toMatchObject({
+      playbackMode: "embedded",
       playbackSeconds: 0,
       notes: [],
     });

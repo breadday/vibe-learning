@@ -57,6 +57,7 @@ export function AddVideoForm() {
           title: title.trim(),
           normalizedUrl: parseResult.normalizedUrl,
           status: "not-started",
+          playbackMode: "embedded",
           playbackSeconds: 0,
           notes: [],
           createdAt: now,

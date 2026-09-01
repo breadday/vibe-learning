@@ -47,7 +47,7 @@ export const YouTubeLearningPlayer = forwardRef<YouTubeLearningPlayerHandle, Pro
     { videoId, title, initialSeconds, onTimeUpdate },
     ref,
   ) {
-    const containerRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLIFrameElement>(null);
     const playerRef = useRef<Player | null>(null);
     const onTimeUpdateRef = useRef(onTimeUpdate);
     const lastPersistedSecondRef = useRef(initialSeconds);
@@ -57,9 +57,13 @@ export const YouTubeLearningPlayer = forwardRef<YouTubeLearningPlayerHandle, Pro
     }, [onTimeUpdate]);
 
     const readCurrentTime = useCallback((shouldPersist: boolean) => {
+      const player = playerRef.current;
+      const currentTime = player && typeof player.getCurrentTime === "function"
+        ? player.getCurrentTime()
+        : initialSeconds;
       const seconds = Math.max(
         0,
-        Math.floor(playerRef.current?.getCurrentTime() ?? initialSeconds),
+        Math.floor(currentTime),
       );
       onTimeUpdateRef.current(seconds, shouldPersist);
       if (shouldPersist) lastPersistedSecondRef.current = seconds;
@@ -94,10 +98,17 @@ export const YouTubeLearningPlayer = forwardRef<YouTubeLearningPlayerHandle, Pro
     useImperativeHandle(ref, () => ({
       getCurrentTime: () => readCurrentTime(false),
       seekTo: (seconds: number) => {
-        playerRef.current?.seekTo(seconds, true);
+        const player = playerRef.current;
+        if (player && typeof player.seekTo === "function") {
+          player.seekTo(seconds, true);
+        }
         onTimeUpdateRef.current(seconds, false);
       },
     }));
+
+    useEffect(() => {
+      createPlayer();
+    });
 
     useEffect(() => {
       const interval = window.setInterval(() => {
@@ -114,20 +125,27 @@ export const YouTubeLearningPlayer = forwardRef<YouTubeLearningPlayerHandle, Pro
         window.clearInterval(interval);
         window.removeEventListener("pagehide", persistBeforeLeaving);
         readCurrentTime(true);
-        playerRef.current?.destroy();
         playerRef.current = null;
       };
     }, [readCurrentTime]);
 
     return (
-      <div className="saved-player" aria-label={`${title} 영상 플레이어`}>
-        <div ref={containerRef} />
+      <>
+        <div className="saved-player">
+          <iframe
+            ref={containerRef}
+            src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&playsinline=1&start=${Math.floor(initialSeconds)}`}
+            title={`${title} 영상 플레이어`}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </div>
         <Script
           src="https://www.youtube.com/iframe_api"
           strategy="afterInteractive"
           onReady={createPlayer}
         />
-      </div>
+      </>
     );
   },
 );

@@ -60,6 +60,7 @@ export function AddVideoForm() {
           playbackMode: "embedded",
           playbackSeconds: 0,
           notes: [],
+          segments: [],
           createdAt: now,
           updatedAt: now,
         },

@@ -20,6 +20,7 @@ function video(
     playbackMode: "embedded",
     playbackSeconds: 0,
     notes: [],
+    segments: [],
     createdAt: "2026-08-01T00:00:00.000Z",
     updatedAt,
   };
@@ -124,5 +125,13 @@ describe("learningBackup", () => {
         ok: true,
         store: store([legacyVideo]),
       });
+  });
+
+  it("exports and restores stored learning segments", () => {
+    const sourceVideo = video("AAAAAAAAAAA", "구간 백업", "2026-08-03T00:00:00.000Z");
+    sourceVideo.segments = [{ id: "00000000-0000-4000-8000-000000000003", title: "핵심", startSeconds: 5, endSeconds: 20, createdAt: "2026-08-03T00:00:00.000Z", updatedAt: "2026-08-03T00:00:00.000Z" }];
+    const backup = createLearningBackup(store([sourceVideo]));
+    expect(backup.ok).toBe(true);
+    if (backup.ok) expect(parseLearningBackup(backup.json)).toEqual({ ok: true, store: store([sourceVideo]) });
   });
 });

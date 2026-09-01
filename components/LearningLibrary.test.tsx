@@ -22,6 +22,7 @@ function video(
   playbackMode: "embedded",
   playbackSeconds: 0,
   notes: [],
+  segments: [],
   createdAt,
     updatedAt,
   };

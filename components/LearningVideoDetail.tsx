@@ -8,6 +8,7 @@ import {
   saveLearningStore,
   updateCurrentVideo,
   type LearningNote,
+  type LearningSegment,
   type LearningVideo,
 } from "../lib/storage/learningStore";
 import {
@@ -16,6 +17,7 @@ import {
   parseTimeInput,
 } from "../lib/youtube/youtubePlayback";
 import { YouTubeLearningPlayer, type YouTubeLearningPlayerHandle } from "./YouTubeLearningPlayer";
+import { LearningSegments } from "./LearningSegments";
 
 const statusLabels = {
   "not-started": "학습 전",
@@ -162,6 +164,10 @@ export function LearningVideoDetail() {
     }));
   }
 
+  function handleSaveSegments(segments: LearningSegment[]) {
+    return saveVideoUpdate((current) => ({ ...current, segments }));
+  }
+
   if (video === undefined) {
     return <main className="detail-state" role="status">학습 영상을 불러오는 중입니다.</main>;
   }
@@ -257,6 +263,14 @@ export function LearningVideoDetail() {
             </button>
           </section>
         )}
+        <LearningSegments
+          segments={video.segments}
+          youtubeId={video.youtubeId}
+          mode={video.playbackMode}
+          currentSeconds={video.playbackMode === "external" ? video.playbackSeconds : currentSeconds ?? video.playbackSeconds}
+          onSave={handleSaveSegments}
+          onPlay={(segment) => playerRef.current?.playSegment(segment.startSeconds, segment.endSeconds)}
+        />
         <section className="personal-notes" aria-labelledby="personal-notes-heading">
           <div className="personal-notes-heading">
             <h2 id="personal-notes-heading">개인 메모</h2>

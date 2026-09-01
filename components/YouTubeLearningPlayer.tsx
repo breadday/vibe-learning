@@ -6,6 +6,8 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 
 type Player = {
   destroy: () => void;
   getCurrentTime: () => number;
+  pauseVideo: () => void;
+  playVideo: () => void;
   seekTo: (seconds: number, allowSeekAhead: boolean) => void;
 };
 
@@ -25,7 +27,7 @@ declare global {
   interface Window {
     YT?: {
       Player: PlayerConstructor;
-      PlayerState: { PAUSED: number; ENDED: number };
+      PlayerState: { PLAYING: number; PAUSED: number; ENDED: number };
     };
   }
 }
@@ -33,6 +35,7 @@ declare global {
 export type YouTubeLearningPlayerHandle = {
   getCurrentTime: () => number;
   seekTo: (seconds: number) => void;
+  playSegment: (startSeconds: number, endSeconds: number) => void;
 };
 
 type Props = {
@@ -51,6 +54,8 @@ export const YouTubeLearningPlayer = forwardRef<YouTubeLearningPlayerHandle, Pro
     const playerRef = useRef<Player | null>(null);
     const onTimeUpdateRef = useRef(onTimeUpdate);
     const lastPersistedSecondRef = useRef(initialSeconds);
+    const activeSegmentEndRef = useRef<number | null>(null);
+    const startingSegmentRef = useRef(false);
 
     useEffect(() => {
       onTimeUpdateRef.current = onTimeUpdate;
@@ -87,6 +92,10 @@ export const YouTubeLearningPlayer = forwardRef<YouTubeLearningPlayerHandle, Pro
           },
           onStateChange: (event) => {
             const states = window.YT?.PlayerState;
+            if (states && event.data === states.PLAYING) {
+              if (startingSegmentRef.current) startingSegmentRef.current = false;
+              else activeSegmentEndRef.current = null;
+            }
             if (states && (event.data === states.PAUSED || event.data === states.ENDED)) {
               readCurrentTime(true);
             }
@@ -98,11 +107,22 @@ export const YouTubeLearningPlayer = forwardRef<YouTubeLearningPlayerHandle, Pro
     useImperativeHandle(ref, () => ({
       getCurrentTime: () => readCurrentTime(false),
       seekTo: (seconds: number) => {
+        activeSegmentEndRef.current = null;
         const player = playerRef.current;
         if (player && typeof player.seekTo === "function") {
           player.seekTo(seconds, true);
         }
         onTimeUpdateRef.current(seconds, false);
+      },
+      playSegment: (startSeconds: number, endSeconds: number) => {
+        const player = playerRef.current;
+        activeSegmentEndRef.current = endSeconds;
+        startingSegmentRef.current = true;
+        if (player) {
+          player.seekTo(startSeconds, true);
+          player.playVideo();
+        }
+        onTimeUpdateRef.current(startSeconds, false);
       },
     }));
 
@@ -114,6 +134,12 @@ export const YouTubeLearningPlayer = forwardRef<YouTubeLearningPlayerHandle, Pro
       const interval = window.setInterval(() => {
         if (!playerRef.current) return;
         const seconds = readCurrentTime(false);
+        if (activeSegmentEndRef.current !== null && seconds >= activeSegmentEndRef.current) {
+          playerRef.current.pauseVideo();
+          activeSegmentEndRef.current = null;
+          readCurrentTime(true);
+          return;
+        }
         if (Math.abs(seconds - lastPersistedSecondRef.current) >= 5) {
           readCurrentTime(true);
         }

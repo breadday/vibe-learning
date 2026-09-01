@@ -17,6 +17,7 @@ function video(youtubeId: string, title: string, updatedAt: string): LearningVid
     playbackMode: "embedded",
     playbackSeconds: 0,
     notes: [],
+    segments: [],
     createdAt: "2026-08-01T00:00:00.000Z",
     updatedAt,
   };

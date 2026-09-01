@@ -19,11 +19,22 @@ test("learns with a manually saved position in external playback mode", async ({
   await expect(page.getByRole("link", { name: "YouTube에서 보기" }))
     .toHaveAttribute("href", `https://www.youtube.com/watch?v=${videoId}&t=763s`);
 
+  await page.getByLabel("구간 제목").fill("외부 핵심 구간");
+  await page.getByLabel("구간 시작 시간").fill("12:43");
+  await page.getByLabel("구간 종료 시간").fill("13:20");
+  await page.getByRole("button", { name: "구간 추가" }).click();
+  await expect(page.getByRole("link", { name: "YouTube에서 시작" }))
+    .toHaveAttribute("href", `https://www.youtube.com/watch?v=${videoId}&t=763s`);
+  await page.getByRole("region", { name: "학습 구간" }).getByRole("button", { name: "수정" }).click();
+  await page.getByLabel("구간 제목").fill("수정한 외부 구간");
+  await page.getByRole("button", { name: "구간 수정 저장" }).click();
+  await expect(page.getByText("수정한 외부 구간")).toBeVisible();
+
   await page.getByLabel("메모 내용").fill("외부 위치에 저장한 메모");
   await page.getByRole("button", { name: "메모 저장" }).click();
   await expect(page.getByRole("button", { name: "[12:43] 위치로 이동" })).toBeVisible();
 
-  await page.getByRole("button", { name: "수정" }).click();
+  await page.getByRole("region", { name: "개인 메모" }).getByRole("button", { name: "수정" }).click();
   await page.getByLabel("메모 수정 내용").fill("수정한 외부 재생 메모");
   await page.getByRole("button", { name: "저장", exact: true }).click();
   await expect(page.getByText("수정한 외부 재생 메모")).toBeVisible();
@@ -39,6 +50,9 @@ test("learns with a manually saved position in external playback mode", async ({
   expect(stored.lastOpenedVideoId).toBe(videoId);
 
   page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "삭제" }).click();
+  await page.getByRole("region", { name: "개인 메모" }).getByRole("button", { name: "삭제" }).click();
   await expect(page.getByText("아직 작성한 개인 메모가 없습니다.")).toBeVisible();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("region", { name: "학습 구간" }).getByRole("button", { name: "삭제" }).click();
+  await expect(page.getByText("아직 저장한 학습 구간이 없습니다.")).toBeVisible();
 });

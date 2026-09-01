@@ -13,6 +13,21 @@ const learningNoteSchema = z
   })
   .strict();
 
+const learningSegmentSchema = z
+  .object({
+    id: z.uuid(),
+    title: z.string().trim().min(1),
+    startSeconds: z.number().int().min(0),
+    endSeconds: z.number().int().min(1),
+    createdAt: z.iso.datetime(),
+    updatedAt: z.iso.datetime(),
+  })
+  .strict()
+  .refine((segment) => segment.endSeconds > segment.startSeconds, {
+    path: ["endSeconds"],
+    message: "종료 시간은 시작 시간보다 커야 합니다.",
+  });
+
 const learningVideoSchema = z
   .object({
     youtubeId: z.string().regex(/^[A-Za-z0-9_-]{11}$/),
@@ -22,6 +37,7 @@ const learningVideoSchema = z
     playbackMode: z.enum(["embedded", "external"]).default("embedded"),
     playbackSeconds: z.number().int().min(0).default(0),
     notes: z.array(learningNoteSchema).max(500).default([]),
+    segments: z.array(learningSegmentSchema).default([]),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
   })
@@ -47,6 +63,18 @@ const learningVideoSchema = z
         });
       }
       noteIds.add(note.id);
+    });
+
+    const segmentIds = new Set<string>();
+    video.segments.forEach((segment, index) => {
+      if (segmentIds.has(segment.id)) {
+        context.addIssue({
+          code: "custom",
+          path: ["segments", index, "id"],
+          message: "같은 구간 ID는 한 영상에서 한 번만 사용할 수 있습니다.",
+        });
+      }
+      segmentIds.add(segment.id);
     });
   });
 
@@ -85,6 +113,7 @@ const learningStoreSchema = z
 
 export type LearningVideo = z.infer<typeof learningVideoSchema>;
 export type LearningNote = z.infer<typeof learningNoteSchema>;
+export type LearningSegment = z.infer<typeof learningSegmentSchema>;
 export type LearningStore = z.infer<typeof learningStoreSchema>;
 export type SaveLearningStoreResult =
   | { ok: true }

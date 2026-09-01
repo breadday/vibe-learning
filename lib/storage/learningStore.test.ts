@@ -22,6 +22,7 @@ function populatedStore(): LearningStore {
         playbackMode: "embedded",
         playbackSeconds: 0,
         notes: [],
+        segments: [],
         createdAt: "2026-08-29T10:00:00.000Z",
         updatedAt: "2026-08-29T10:00:00.000Z",
       },
@@ -76,6 +77,7 @@ describe("learningStore", () => {
     const legacyVideo = { ...legacyStore.videos[0] } as Partial<LearningStore["videos"][number]>;
     delete legacyVideo.playbackSeconds;
     delete legacyVideo.notes;
+    delete legacyVideo.segments;
     window.localStorage.setItem(
       learningStoreKey,
       JSON.stringify({ ...legacyStore, videos: [legacyVideo] }),
@@ -85,7 +87,18 @@ describe("learningStore", () => {
       playbackMode: "embedded",
       playbackSeconds: 0,
       notes: [],
+      segments: [],
     });
+  });
+
+  it("persists learning segments and rejects invalid ranges", () => {
+    const store = populatedStore();
+    store.videos[0].segments = [segment(10, 25)];
+    expect(saveLearningStore(store)).toEqual({ ok: true });
+    expect(loadLearningStore().videos[0].segments).toEqual([segment(10, 25)]);
+
+    store.videos[0].segments = [segment(25, 10)];
+    expect(saveLearningStore(store)).toEqual({ ok: false, reason: "invalid-data" });
   });
 
   it("updates only the selected video without mutating the source", () => {
@@ -192,6 +205,17 @@ function note(id: string, text: string) {
     id,
     timestampSeconds: 0,
     text,
+    createdAt: "2026-08-29T10:00:00.000Z",
+    updatedAt: "2026-08-29T10:00:00.000Z",
+  };
+}
+
+function segment(startSeconds: number, endSeconds: number) {
+  return {
+    id: "00000000-0000-4000-8000-000000000002",
+    title: "개인 구간",
+    startSeconds,
+    endSeconds,
     createdAt: "2026-08-29T10:00:00.000Z",
     updatedAt: "2026-08-29T10:00:00.000Z",
   };

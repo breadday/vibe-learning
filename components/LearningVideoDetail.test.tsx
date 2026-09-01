@@ -8,6 +8,7 @@ import {
 
 const videoId = "ABCDEFGHIJK";
 const seekTo = vi.hoisted(() => vi.fn());
+const playSegment = vi.hoisted(() => vi.fn());
 
 vi.mock("./YouTubeLearningPlayer", async () => {
   const React = await import("react");
@@ -15,11 +16,12 @@ vi.mock("./YouTubeLearningPlayer", async () => {
   return {
     YouTubeLearningPlayer: React.forwardRef(function MockPlayer(
       { initialSeconds }: { initialSeconds: number },
-      ref: React.ForwardedRef<{ getCurrentTime: () => number; seekTo: (seconds: number) => void }>,
+      ref: React.ForwardedRef<{ getCurrentTime: () => number; seekTo: (seconds: number) => void; playSegment: (start: number, end: number) => void }>,
     ) {
       React.useImperativeHandle(ref, () => ({
         getCurrentTime: () => initialSeconds,
         seekTo,
+        playSegment,
       }));
       return <div aria-label="테스트 영상 플레이어" />;
     }),
@@ -32,6 +34,7 @@ vi.mock("next/navigation", () => ({
 
 beforeEach(() => {
   seekTo.mockClear();
+  playSegment.mockClear();
   const store: LearningStore = {
     schemaVersion: 1,
     videos: [
@@ -43,6 +46,7 @@ beforeEach(() => {
         playbackMode: "embedded",
         playbackSeconds: 0,
         notes: [],
+        segments: [],
         createdAt: "2026-08-01T00:00:00.000Z",
         updatedAt: "2026-08-01T00:00:00.000Z",
       },
@@ -217,5 +221,40 @@ describe("LearningVideoDetail", () => {
 
   it("formats timestamps beyond one hour without losing minute padding", () => {
     expect(formatTimestamp(3_723)).toBe("[1:02:03]");
+  });
+
+  it("uses the external saved position and creates a segment timestamp link", () => {
+    const store = JSON.parse(window.localStorage.getItem(learningStoreKey) ?? "null") as LearningStore;
+    store.videos[0].playbackMode = "external";
+    store.videos[0].playbackSeconds = 125;
+    window.localStorage.setItem(learningStoreKey, JSON.stringify(store));
+    render(<LearningVideoDetail />);
+    fireEvent.change(screen.getByLabelText("구간 제목"), { target: { value: "외부 구간" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "마지막 위치 적용" })[0]);
+    fireEvent.change(screen.getByLabelText("구간 종료 시간"), { target: { value: "2:30" } });
+    fireEvent.click(screen.getByRole("button", { name: "구간 추가" }));
+    expect(screen.getByRole("link", { name: "YouTube에서 시작" })).toHaveAttribute("href", `https://www.youtube.com/watch?v=${videoId}&t=125s`);
+  });
+
+  it("adds, validates, edits, plays, and deletes a learning segment", () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<LearningVideoDetail />);
+    fireEvent.change(screen.getByLabelText("구간 제목"), { target: { value: "핵심 구간" } });
+    fireEvent.change(screen.getByLabelText("구간 시작 시간"), { target: { value: "00:20" } });
+    fireEvent.change(screen.getByLabelText("구간 종료 시간"), { target: { value: "00:10" } });
+    fireEvent.click(screen.getByRole("button", { name: "구간 추가" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("시작 시간보다 커야");
+
+    fireEvent.change(screen.getByLabelText("구간 종료 시간"), { target: { value: "00:40" } });
+    fireEvent.click(screen.getByRole("button", { name: "구간 추가" }));
+    expect(screen.getByText("00:20–00:40")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "구간 재생" }));
+    expect(playSegment).toHaveBeenCalledWith(20, 40);
+    fireEvent.click(screen.getByRole("button", { name: "수정" }));
+    fireEvent.change(screen.getByLabelText("구간 제목"), { target: { value: "수정 구간" } });
+    fireEvent.click(screen.getByRole("button", { name: "구간 수정 저장" }));
+    expect(screen.getByText("수정 구간")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "삭제" }));
+    expect(screen.getByText("아직 저장한 학습 구간이 없습니다.")).toBeInTheDocument();
   });
 });

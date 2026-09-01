@@ -91,6 +91,7 @@ describe("AddVideoForm", () => {
           playbackMode: "embedded",
           playbackSeconds: 0,
           notes: [],
+          segments: [],
           createdAt: timestamp,
           updatedAt: timestamp,
         },

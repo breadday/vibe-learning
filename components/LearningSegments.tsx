@@ -1,18 +1,29 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
-import type { LearningSegment } from "../lib/storage/learningStore";
+import { createLearningId, type LearningSegment } from "../lib/storage/learningStore";
 import { createYouTubeWatchUrl, formatTimeInput, parseTimeInput } from "../lib/youtube/youtubePlayback";
 
-type Props = { segments: LearningSegment[]; youtubeId: string; mode: "embedded" | "external"; currentSeconds: number; onSave: (segments: LearningSegment[]) => boolean; onPlay: (segment: LearningSegment) => void };
+type Props = { segments: LearningSegment[]; youtubeId: string; mode: "embedded" | "external"; getCurrentSeconds: () => number | null; onSave: (segments: LearningSegment[]) => boolean; onPlay: (segment: LearningSegment) => void };
 type Draft = { title: string; start: string; end: string };
 const emptyDraft: Draft = { title: "", start: "", end: "" };
 
-export function LearningSegments({ segments, youtubeId, mode, currentSeconds, onSave, onPlay }: Props) {
+export function LearningSegments({ segments, youtubeId, mode, getCurrentSeconds, onSave, onPlay }: Props) {
   const [draft, setDraft] = useState(emptyDraft);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const setField = (field: keyof Draft, value: string) => setDraft((current) => ({ ...current, [field]: value }));
+  const applyCurrentTime = (field: "start" | "end") => {
+    const seconds = getCurrentSeconds();
+    if (seconds === null || !Number.isFinite(seconds)) {
+      setError(mode === "embedded"
+        ? "현재 위치를 읽을 수 없습니다. 영상을 재생한 뒤 다시 시도하거나 YouTube에서 학습하기를 이용해 주세요."
+        : "마지막 학습 위치를 먼저 저장해 주세요.");
+      return;
+    }
+    setField(field, formatTimeInput(seconds));
+    setError(null);
+  };
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -24,7 +35,7 @@ export function LearningSegments({ segments, youtubeId, mode, currentSeconds, on
     if (endSeconds === null) return setError("종료 시간을 분:초 또는 시:분:초 형식으로 입력해 주세요.");
     if (endSeconds <= startSeconds) return setError("종료 시간은 시작 시간보다 커야 합니다.");
     const now = new Date().toISOString();
-    const next = editingId ? segments.map((segment) => segment.id === editingId ? { ...segment, title, startSeconds, endSeconds, updatedAt: now } : segment) : [...segments, { id: crypto.randomUUID(), title, startSeconds, endSeconds, createdAt: now, updatedAt: now }];
+    const next = editingId ? segments.map((segment) => segment.id === editingId ? { ...segment, title, startSeconds, endSeconds, updatedAt: now } : segment) : [...segments, { id: createLearningId(), title, startSeconds, endSeconds, createdAt: now, updatedAt: now }];
     if (onSave([...next].sort((a, b) => a.startSeconds - b.startSeconds))) { setDraft(emptyDraft); setEditingId(null); setError(null); }
   }
 
@@ -33,9 +44,9 @@ export function LearningSegments({ segments, youtubeId, mode, currentSeconds, on
     <form className="segment-form" onSubmit={submit}>
       <label>구간 제목<input value={draft.title} onChange={(e) => setField("title", e.target.value)} /></label>
       <label>시작 시간<input aria-label="구간 시작 시간" inputMode="numeric" placeholder="00:00" value={draft.start} onChange={(e) => setField("start", e.target.value)} /></label>
-      <button type="button" onClick={() => setField("start", formatTimeInput(currentSeconds))}>{mode === "embedded" ? "현재 위치" : "마지막 위치"} 적용</button>
+      <button type="button" onClick={() => applyCurrentTime("start")}>{mode === "embedded" ? "현재 위치" : "마지막 위치"} 적용</button>
       <label>종료 시간<input aria-label="구간 종료 시간" inputMode="numeric" placeholder="00:00" value={draft.end} onChange={(e) => setField("end", e.target.value)} /></label>
-      <button type="button" onClick={() => setField("end", formatTimeInput(currentSeconds))}>{mode === "embedded" ? "현재 위치" : "마지막 위치"} 적용</button>
+      <button type="button" onClick={() => applyCurrentTime("end")}>{mode === "embedded" ? "현재 위치" : "마지막 위치"} 적용</button>
       {error ? <p className="form-error" role="alert">{error}</p> : null}
       <div className="segment-form-actions"><button type="submit">{editingId ? "구간 수정 저장" : "구간 추가"}</button>{editingId ? <button type="button" onClick={() => { setEditingId(null); setDraft(emptyDraft); setError(null); }}>취소</button> : null}</div>
     </form>

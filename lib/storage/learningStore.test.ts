@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  createLearningId,
   createEmptyLearningStore,
   learningStoreKey,
   loadLearningStore,
@@ -9,6 +10,20 @@ import {
 } from "./learningStore";
 
 const videoId = "ABCDEFGHIJK";
+
+describe("createLearningId", () => {
+  it("creates a valid UUID when randomUUID is unavailable", () => {
+    vi.stubGlobal("crypto", {
+      getRandomValues: (bytes: Uint8Array) => bytes.fill(0x12),
+    });
+
+    try {
+      expect(createLearningId()).toBe("12121212-1212-4212-9212-121212121212");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
 
 function populatedStore(): LearningStore {
   return {

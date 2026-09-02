@@ -9,6 +9,7 @@ import {
 const videoId = "ABCDEFGHIJK";
 const seekTo = vi.hoisted(() => vi.fn());
 const playSegment = vi.hoisted(() => vi.fn());
+const getCurrentTime = vi.hoisted(() => vi.fn(() => 0));
 
 vi.mock("./YouTubeLearningPlayer", async () => {
   const React = await import("react");
@@ -19,7 +20,7 @@ vi.mock("./YouTubeLearningPlayer", async () => {
       ref: React.ForwardedRef<{ getCurrentTime: () => number; seekTo: (seconds: number) => void; playSegment: (start: number, end: number) => void }>,
     ) {
       React.useImperativeHandle(ref, () => ({
-        getCurrentTime: () => initialSeconds,
+        getCurrentTime: () => getCurrentTime() || initialSeconds,
         seekTo,
         playSegment,
       }));
@@ -35,6 +36,8 @@ vi.mock("next/navigation", () => ({
 beforeEach(() => {
   seekTo.mockClear();
   playSegment.mockClear();
+  getCurrentTime.mockReset();
+  getCurrentTime.mockReturnValue(0);
   const store: LearningStore = {
     schemaVersion: 1,
     videos: [
@@ -256,5 +259,18 @@ describe("LearningVideoDetail", () => {
     expect(screen.getByText("수정 구간")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "삭제" }));
     expect(screen.getByText("아직 저장한 학습 구간이 없습니다.")).toBeInTheDocument();
+  });
+
+  it("applies the player's current time when each segment time button is clicked", () => {
+    getCurrentTime.mockReturnValueOnce(83).mockReturnValueOnce(147);
+    render(<LearningVideoDetail />);
+
+    const applyButtons = screen.getAllByRole("button", { name: "현재 위치 적용" });
+    fireEvent.click(applyButtons[0]);
+    fireEvent.click(applyButtons[1]);
+
+    expect(screen.getByLabelText("구간 시작 시간")).toHaveValue("1:23");
+    expect(screen.getByLabelText("구간 종료 시간")).toHaveValue("2:27");
+    expect(getCurrentTime).toHaveBeenCalledTimes(2);
   });
 });

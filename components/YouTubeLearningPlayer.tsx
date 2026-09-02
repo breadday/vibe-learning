@@ -18,6 +18,7 @@ type PlayerConstructor = new (
     playerVars: Record<string, number | string>;
     events: {
       onReady: () => void;
+      onError: () => void;
       onStateChange: (event: { data: number }) => void;
     };
   },
@@ -33,7 +34,7 @@ declare global {
 }
 
 export type YouTubeLearningPlayerHandle = {
-  getCurrentTime: () => number;
+  getCurrentTime: () => number | null;
   seekTo: (seconds: number) => void;
   playSegment: (startSeconds: number, endSeconds: number) => void;
 };
@@ -56,6 +57,7 @@ export const YouTubeLearningPlayer = forwardRef<YouTubeLearningPlayerHandle, Pro
     const lastPersistedSecondRef = useRef(initialSeconds);
     const activeSegmentEndRef = useRef<number | null>(null);
     const startingSegmentRef = useRef(false);
+    const isReadyRef = useRef(false);
 
     useEffect(() => {
       onTimeUpdateRef.current = onTimeUpdate;
@@ -75,7 +77,7 @@ export const YouTubeLearningPlayer = forwardRef<YouTubeLearningPlayerHandle, Pro
       return seconds;
     }, [initialSeconds]);
 
-    function createPlayer() {
+    const createPlayer = useCallback(() => {
       if (!containerRef.current || playerRef.current || !window.YT?.Player) return;
 
       playerRef.current = new window.YT.Player(containerRef.current, {
@@ -88,7 +90,11 @@ export const YouTubeLearningPlayer = forwardRef<YouTubeLearningPlayerHandle, Pro
         },
         events: {
           onReady: () => {
+            isReadyRef.current = true;
             if (initialSeconds > 0) playerRef.current?.seekTo(initialSeconds, true);
+          },
+          onError: () => {
+            isReadyRef.current = false;
           },
           onStateChange: (event) => {
             const states = window.YT?.PlayerState;
@@ -102,10 +108,10 @@ export const YouTubeLearningPlayer = forwardRef<YouTubeLearningPlayerHandle, Pro
           },
         },
       });
-    }
+    }, [initialSeconds, readCurrentTime, videoId]);
 
     useImperativeHandle(ref, () => ({
-      getCurrentTime: () => readCurrentTime(false),
+      getCurrentTime: () => isReadyRef.current ? readCurrentTime(false) : null,
       seekTo: (seconds: number) => {
         activeSegmentEndRef.current = null;
         const player = playerRef.current;
@@ -128,7 +134,15 @@ export const YouTubeLearningPlayer = forwardRef<YouTubeLearningPlayerHandle, Pro
 
     useEffect(() => {
       createPlayer();
-    });
+      if (playerRef.current) return;
+
+      const connectInterval = window.setInterval(() => {
+        createPlayer();
+        if (playerRef.current) window.clearInterval(connectInterval);
+      }, 100);
+
+      return () => window.clearInterval(connectInterval);
+    }, [createPlayer]);
 
     useEffect(() => {
       const interval = window.setInterval(() => {

@@ -6,6 +6,7 @@ import { type FormEvent, useReducer, useRef, useState, useSyncExternalStore } fr
 import {
   loadLearningStore,
   saveLearningStore,
+  createLearningId,
   updateCurrentVideo,
   type LearningNote,
   type LearningSegment,
@@ -70,7 +71,7 @@ export function LearningVideoDetail() {
     );
 
     if (!result.ok) {
-      setSaveError("개인 메모를 저장하지 못했습니다. 다시 시도해 주세요.");
+      setSaveError("학습 데이터를 저장하지 못했습니다. 브라우저 저장 공간을 확인한 뒤 다시 시도해 주세요.");
       return false;
     }
 
@@ -88,7 +89,7 @@ export function LearningVideoDetail() {
 
     const now = new Date().toISOString();
     const note: LearningNote = {
-      id: crypto.randomUUID(),
+      id: createLearningId(),
       timestampSeconds: video.playbackMode === "external"
         ? video.playbackSeconds
         : playerRef.current?.getCurrentTime() ?? video.playbackSeconds,
@@ -166,6 +167,12 @@ export function LearningVideoDetail() {
 
   function handleSaveSegments(segments: LearningSegment[]) {
     return saveVideoUpdate((current) => ({ ...current, segments }));
+  }
+
+  function getActiveCurrentSeconds() {
+    if (!video) return 0;
+    if (video.playbackMode === "external") return video.playbackSeconds;
+    return playerRef.current?.getCurrentTime() ?? null;
   }
 
   if (video === undefined) {
@@ -267,7 +274,7 @@ export function LearningVideoDetail() {
           segments={video.segments}
           youtubeId={video.youtubeId}
           mode={video.playbackMode}
-          currentSeconds={video.playbackMode === "external" ? video.playbackSeconds : currentSeconds ?? video.playbackSeconds}
+          getCurrentSeconds={getActiveCurrentSeconds}
           onSave={handleSaveSegments}
           onPlay={(segment) => playerRef.current?.playSegment(segment.startSeconds, segment.endSeconds)}
         />

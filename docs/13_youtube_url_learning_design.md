@@ -2,7 +2,7 @@
 
 ## 목적
 
-사용자가 YouTube 주소 하나를 붙여넣고 비용 없이 학습 목록에 등록한 뒤, 영상·타임스탬프·개인 메모를 한 화면에서 관리하도록 한다.
+사용자가 YouTube 주소 하나를 붙여넣고 공식 API로 제목을 자동 입력해 학습 목록에 등록한 뒤, 영상·타임스탬프·개인 메모를 한 화면에서 관리하도록 한다.
 
 ## 사용자 흐름
 
@@ -11,9 +11,10 @@
 1. `YouTube 주소를 붙여 넣으세요` 입력창을 표시한다.
 2. 사용자가 URL을 붙여넣으면 즉시 형식을 검사한다.
 3. 정상 URL이면 영상 썸네일과 영상 ID를 미리 보여준다.
-4. 사용자가 제목을 입력하거나 수정한다.
-5. `학습에 추가` 버튼을 누르면 브라우저에 저장한다.
-6. 저장된 영상의 학습 상세 화면으로 이동한다.
+4. 서버 Route Handler가 공식 YouTube Data API에서 제목만 조회해 입력한다.
+5. 사용자는 자동 제목을 수정하거나 조회 실패 시 직접 입력한다.
+6. `학습에 추가` 버튼을 누르면 브라우저에 저장한다.
+7. 저장된 영상의 학습 상세 화면으로 이동한다.
 
 홈에는 URL 입력 아래에 다음 항목만 둔다.
 
@@ -45,6 +46,7 @@ https://www.youtube.com/embed/dQw4w9WgXcQ
 ```text
 app/
   page.tsx
+  api/youtube-title/route.ts
   videos/[id]/page.tsx
 components/
   AddVideoForm.tsx
@@ -93,9 +95,17 @@ type ParseYouTubeUrlResult =
 https://i.ytimg.com/vi/{videoId}/hqdefault.jpg
 ```
 
-제목 자동 조회가 실패해도 등록 가능해야 한다. 무료 MVP에서는 제목을 사용자가 입력하는 방식을 기본으로 한다.
+제목 자동 조회가 실패해도 수동 입력으로 등록 가능해야 한다. 자동 제목은 사용자 입력을 덮어쓰지 않으며 URL 변경 뒤 도착한 이전 응답은 무시한다.
 
-### 4단계 — 목록과 상태
+### 4단계 — 제목 조회 Route Handler
+
+- `GET /api/youtube-title?videoId={11자리 ID}`에서 영상 ID를 다시 검사한다.
+- 서버 전용 `YOUTUBE_API_KEY`로 고정된 공식 `videos.list` 엔드포인트를 호출한다.
+- `part=snippet`, `fields=items(snippet(title))`를 사용하고 클라이언트에는 검증한 제목만 반환한다.
+- 키 미설정, 영상 없음, 외부 API 오류를 안전한 상태 코드와 일반화된 오류로 변환한다.
+- 클라이언트는 300ms 디바운스, 요청 취소와 응답 식별로 경합을 방지한다.
+
+### 5단계 — 목록과 상태
 
 - 상태: 학습 전, 학습 중, 완료
 - 최근 수정 순으로 정렬
@@ -103,7 +113,7 @@ https://i.ytimg.com/vi/{videoId}/hqdefault.jpg
 - 중복 영상 생성 금지
 - 새로고침 후 유지 확인
 
-### 5단계 — JSON 백업·복원
+### 6단계 — JSON 백업·복원
 
 - 백업 파일명: `vibe-learning-backup-YYYY-MM-DD.json`
 - 내보낼 때 스키마 검증
@@ -182,6 +192,6 @@ npm ci → lint → typecheck → test → build
 - 전체 영상 AI 요약
 - 퀴즈와 마인드맵
 - 플레이리스트 일괄 처리
-- 유료 API 연결
+- 제목 이외의 외부 메타데이터 수집
 
 위 기능은 URL 등록·로컬 저장·백업 기능이 안정된 뒤 별도 요구사항으로 검토한다.

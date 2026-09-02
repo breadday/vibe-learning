@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   loadLearningStore,
@@ -14,16 +14,101 @@ const errorMessages = {
   "invalid-video-id": "영상 주소에서 유효한 영상 ID를 찾지 못했습니다.",
 } as const;
 
+type TitleLookupStatus = "idle" | "loading" | "success" | "error";
+type TitleOrigin = "empty" | "automatic" | "user";
+
+const titleLookupDelayMs = 300;
+
 export function AddVideoForm() {
   const router = useRouter();
   const [urlInput, setUrlInput] = useState("");
   const [title, setTitle] = useState("");
   const [duplicateVideoId, setDuplicateVideoId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [titleLookupStatus, setTitleLookupStatus] =
+    useState<TitleLookupStatus>("idle");
+  const titleOriginRef = useRef<TitleOrigin>("empty");
+  const requestSequenceRef = useRef(0);
+  const attemptedVideoIdsRef = useRef(new Set<string>());
   const parseResult = urlInput.trim() ? parseYouTubeUrl(urlInput) : null;
+  const videoId = parseResult?.ok ? parseResult.videoId : null;
   const canSubmit = parseResult?.ok === true && title.trim().length > 0;
 
+  useEffect(() => {
+    const requestSequence = ++requestSequenceRef.current;
+    const controller = new AbortController();
+
+    if (!videoId || attemptedVideoIdsRef.current.has(videoId)) {
+      return () => controller.abort();
+    }
+
+    const timeoutId = window.setTimeout(async () => {
+      attemptedVideoIdsRef.current.add(videoId);
+      setTitleLookupStatus("loading");
+
+      try {
+        const response = await fetch(
+          `/api/youtube-title?videoId=${encodeURIComponent(videoId)}`,
+          { signal: controller.signal },
+        );
+
+        if (!response.ok) {
+          throw new Error("title lookup failed");
+        }
+
+        const payload: unknown = await response.json();
+        const automaticTitle =
+          typeof payload === "object" &&
+          payload !== null &&
+          "title" in payload &&
+          typeof payload.title === "string"
+            ? payload.title.trim()
+            : "";
+
+        if (automaticTitle.length === 0 || [...automaticTitle].length > 100) {
+          throw new Error("invalid title response");
+        }
+
+        if (
+          requestSequence !== requestSequenceRef.current ||
+          controller.signal.aborted
+        ) {
+          return;
+        }
+
+        if (titleOriginRef.current !== "user") {
+          titleOriginRef.current = "automatic";
+          setTitle(automaticTitle);
+        }
+        setTitleLookupStatus("success");
+      } catch {
+        if (
+          requestSequence === requestSequenceRef.current &&
+          !controller.signal.aborted
+        ) {
+          setTitleLookupStatus("error");
+        }
+      }
+    }, titleLookupDelayMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [videoId]);
+
   function handleUrlChange(value: string) {
+    const nextParseResult = value.trim() ? parseYouTubeUrl(value) : null;
+    const nextVideoId = nextParseResult?.ok ? nextParseResult.videoId : null;
+
+    if (nextVideoId !== videoId) {
+      setTitleLookupStatus("idle");
+      if (titleOriginRef.current === "automatic") {
+        titleOriginRef.current = "empty";
+        setTitle("");
+      }
+    }
+
     setUrlInput(value);
     setDuplicateVideoId(null);
     setSaveError(null);
@@ -131,11 +216,30 @@ export function AddVideoForm() {
           value={title}
           onChange={(event) => {
             setTitle(event.target.value);
+            titleOriginRef.current = "user";
             setSaveError(null);
           }}
           placeholder="나중에 알아보기 쉬운 제목을 입력하세요"
           maxLength={120}
+          aria-describedby={
+            titleLookupStatus === "idle" ? undefined : "title-lookup-status"
+          }
         />
+        {titleLookupStatus === "loading" ? (
+          <p id="title-lookup-status" className="form-help" role="status">
+            영상 제목을 가져오는 중입니다.
+          </p>
+        ) : null}
+        {titleLookupStatus === "success" ? (
+          <p id="title-lookup-status" className="form-help" role="status">
+            영상 제목을 자동으로 입력했습니다. 필요하면 수정할 수 있습니다.
+          </p>
+        ) : null}
+        {titleLookupStatus === "error" ? (
+          <p id="title-lookup-status" className="form-error" role="status">
+            제목을 자동으로 가져오지 못했습니다. 직접 입력해 주세요.
+          </p>
+        ) : null}
       </div>
 
       {duplicateVideoId ? (

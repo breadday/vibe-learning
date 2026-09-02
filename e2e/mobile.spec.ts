@@ -65,6 +65,30 @@ test("has no horizontal overflow at 360px on home and detail pages", async ({
   await page.screenshot({ path: testInfo.outputPath("mobile-detail.png"), fullPage: true });
 });
 
+test("title lookup states do not overflow at 360px", async ({ page }) => {
+  let finishLookup!: () => void;
+  const lookupGate = new Promise<void>((resolve) => {
+    finishLookup = resolve;
+  });
+  await page.route("**/api/youtube-title?**", async (route) => {
+    await lookupGate;
+    await route.fulfill({ status: 502, contentType: "application/json", body: "{}" });
+  });
+  await page.goto("/");
+  await page
+    .getByLabel("YouTube 주소를 붙여 넣으세요")
+    .fill("https://youtu.be/MOBILETEST1");
+
+  await expect(page.getByText("영상 제목을 가져오는 중입니다.")).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  finishLookup();
+  await expect(
+    page.getByText("제목을 자동으로 가져오지 못했습니다. 직접 입력해 주세요."),
+  ).toBeVisible();
+  await page.getByLabel("학습 제목").fill("가".repeat(120));
+  await expectNoHorizontalOverflow(page);
+});
+
 async function expectNoHorizontalOverflow(page: import("@playwright/test").Page) {
   const dimensions = await page.evaluate(() => ({
     viewportWidth: document.documentElement.clientWidth,

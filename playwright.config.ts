@@ -9,7 +9,7 @@ export default defineConfig({
   reporter: "html",
   workers: 1,
   use: {
-    baseURL: "http://127.0.0.1:3100",
+    baseURL: "http://localhost:3100",
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
   },
@@ -20,12 +20,12 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev -- --hostname 127.0.0.1 --port 3100",
+    command: "npm run dev -- --hostname localhost --port 3100",
     env: {
       ...process.env,
       NEXT_DIST_DIR: ".next-e2e",
     },
-    url: "http://127.0.0.1:3100",
+    url: "http://localhost:3100",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

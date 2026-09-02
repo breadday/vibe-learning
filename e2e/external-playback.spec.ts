@@ -13,6 +13,19 @@ test("learns with a manually saved position in external playback mode", async ({
   await page.getByRole("button", { name: "YouTube에서 학습하기" }).click();
   await expect(page.getByTitle("외부 재생 학습 영상 영상 플레이어")).toHaveCount(0);
   await expect(page.getByLabel("외부 재생 도구")).toBeVisible();
+  await expect(page.locator(".detail-player-column")).toHaveCount(0);
+  await expect(page.locator(".saved-player")).toHaveCount(0);
+
+  const segmentsRegion = page.getByRole("region", { name: "학습 구간" });
+  const notesRegion = page.getByRole("region", { name: "개인 메모" });
+  const [segmentsBox, notesBox] = await Promise.all([
+    segmentsRegion.boundingBox(),
+    notesRegion.boundingBox(),
+  ]);
+  expect(segmentsBox).not.toBeNull();
+  expect(notesBox).not.toBeNull();
+  expect(Math.abs((segmentsBox?.y ?? 0) - (notesBox?.y ?? 0))).toBeLessThanOrEqual(2);
+  expect(segmentsBox?.x ?? 0).toBeLessThan(notesBox?.x ?? 0);
 
   await page.getByLabel("마지막 학습 위치").fill("12:43");
   await page.getByRole("button", { name: "위치 저장" }).click();
@@ -39,6 +52,13 @@ test("learns with a manually saved position in external playback mode", async ({
   await page.getByRole("button", { name: "저장", exact: true }).click();
   await expect(page.getByText("수정한 외부 재생 메모")).toBeVisible();
 
+  await page.reload();
+  await expect(page.getByLabel("외부 재생 도구")).toBeVisible();
+  await expect(page.getByText("수정한 외부 구간")).toBeVisible();
+  await expect(page.getByText("수정한 외부 재생 메모")).toBeVisible();
+  await expect(page.getByRole("link", { name: "YouTube에서 보기" }))
+    .toHaveAttribute("href", `https://www.youtube.com/watch?v=${videoId}&t=763s`);
+
   const stored = await page.evaluate(() => JSON.parse(
     window.localStorage.getItem("vibe-learning:v1") ?? "null",
   ));
@@ -48,6 +68,12 @@ test("learns with a manually saved position in external playback mode", async ({
   });
   expect(stored.videos[0].notes[0].timestampSeconds).toBe(763);
   expect(stored.lastOpenedVideoId).toBe(videoId);
+
+  await page.getByRole("button", { name: "앱에서 재생 시도" }).click();
+  await expect(page.getByTitle("외부 재생 학습 영상 영상 플레이어")).toBeVisible();
+  await expect(page.getByText("수정한 외부 구간")).toBeVisible();
+  await expect(page.getByText("수정한 외부 재생 메모")).toBeVisible();
+  await page.getByRole("button", { name: "YouTube에서 학습하기" }).click();
 
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("region", { name: "개인 메모" }).getByRole("button", { name: "삭제" }).click();

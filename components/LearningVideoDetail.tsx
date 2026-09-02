@@ -232,7 +232,7 @@ export function LearningVideoDetail() {
             </button>
           </div>
         ) : (
-          <section className="external-playback" aria-label="외부 재생 도구">
+          <section className="external-learning-tools" aria-label="외부 재생 도구">
             <div className="external-watch-action">
               <a
                 className="youtube-watch-button"
@@ -270,116 +270,121 @@ export function LearningVideoDetail() {
             </button>
           </section>
         )}
-        <LearningSegments
-          segments={video.segments}
-          youtubeId={video.youtubeId}
-          mode={video.playbackMode}
-          getCurrentSeconds={getActiveCurrentSeconds}
-          onSave={handleSaveSegments}
-          onPlay={(segment) => playerRef.current?.playSegment(segment.startSeconds, segment.endSeconds)}
-        />
-        <section className="personal-notes" aria-labelledby="personal-notes-heading">
-          <div className="personal-notes-heading">
-            <h2 id="personal-notes-heading">개인 메모</h2>
-            <span>{video.notes.length}/500</span>
-          </div>
-          <form className="note-form" onSubmit={handleAddNote}>
-            <div className="note-position" aria-live="polite">
-              현재 위치 <strong>{formatTimestamp(
-                video.playbackMode === "external"
-                  ? video.playbackSeconds
-                  : currentSeconds ?? video.playbackSeconds,
-              )}</strong>
-              <span>에 저장됩니다</span>
+        <div className={video.playbackMode === "external"
+          ? "external-learning-workspace"
+          : "embedded-learning-content"}
+        >
+          <LearningSegments
+            segments={video.segments}
+            youtubeId={video.youtubeId}
+            mode={video.playbackMode}
+            getCurrentSeconds={getActiveCurrentSeconds}
+            onSave={handleSaveSegments}
+            onPlay={(segment) => playerRef.current?.playSegment(segment.startSeconds, segment.endSeconds)}
+          />
+          <section className="personal-notes" aria-labelledby="personal-notes-heading">
+            <div className="personal-notes-heading">
+              <h2 id="personal-notes-heading">개인 메모</h2>
+              <span>{video.notes.length}/500</span>
             </div>
-            <label className="sr-only" htmlFor="new-note">메모 내용</label>
-            <textarea
-              id="new-note"
-              value={noteText}
-              onChange={(event) => setNoteText(event.target.value)}
-              maxLength={2_000}
-              rows={3}
-              placeholder="메모를 입력하세요"
-            />
-            <div>
-              <small>{noteText.length}/2,000자</small>
-              <button
-                type="submit"
-                disabled={noteText.trim().length === 0 || video.notes.length >= 500}
-              >
-                메모 저장
-              </button>
-            </div>
-          </form>
-          {video.notes.length === 0 ? (
-            <p className="empty-notes">아직 작성한 개인 메모가 없습니다.</p>
-          ) : (
-            <ol className="note-list">
-              {video.notes.map((note) => (
-                <li key={note.id}>
-                  {editingNoteId === note.id ? (
-                    <div className="note-edit-form">
-                      <label className="sr-only" htmlFor={`edit-note-${note.id}`}>
-                        메모 수정 내용
-                      </label>
-                      <textarea
-                        id={`edit-note-${note.id}`}
-                        value={editingText}
-                        onChange={(event) => setEditingText(event.target.value)}
-                        maxLength={2_000}
-                        rows={3}
-                      />
-                      <div className="note-actions">
-                        <button type="button" onClick={() => handleSaveEdit(note.id)}>
-                          저장
-                        </button>
-                        <button type="button" onClick={() => setEditingNoteId(null)}>
-                          취소
-                        </button>
+            <form className="note-form" onSubmit={handleAddNote}>
+              <div className="note-position" aria-live="polite">
+                현재 위치 <strong>{formatTimestamp(
+                  video.playbackMode === "external"
+                    ? video.playbackSeconds
+                    : currentSeconds ?? video.playbackSeconds,
+                )}</strong>
+                <span>에 저장됩니다</span>
+              </div>
+              <label className="sr-only" htmlFor="new-note">메모 내용</label>
+              <textarea
+                id="new-note"
+                value={noteText}
+                onChange={(event) => setNoteText(event.target.value)}
+                maxLength={2_000}
+                rows={3}
+                placeholder="메모를 입력하세요"
+              />
+              <div>
+                <small>{noteText.length}/2,000자</small>
+                <button
+                  type="submit"
+                  disabled={noteText.trim().length === 0 || video.notes.length >= 500}
+                >
+                  메모 저장
+                </button>
+              </div>
+            </form>
+            {video.notes.length === 0 ? (
+              <p className="empty-notes">아직 작성한 개인 메모가 없습니다.</p>
+            ) : (
+              <ol className="note-list">
+                {video.notes.map((note) => (
+                  <li key={note.id}>
+                    {editingNoteId === note.id ? (
+                      <div className="note-edit-form">
+                        <label className="sr-only" htmlFor={`edit-note-${note.id}`}>
+                          메모 수정 내용
+                        </label>
+                        <textarea
+                          id={`edit-note-${note.id}`}
+                          value={editingText}
+                          onChange={(event) => setEditingText(event.target.value)}
+                          maxLength={2_000}
+                          rows={3}
+                        />
+                        <div className="note-actions">
+                          <button type="button" onClick={() => handleSaveEdit(note.id)}>
+                            저장
+                          </button>
+                          <button type="button" onClick={() => setEditingNoteId(null)}>
+                            취소
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <>
-                      <button
-                        className="note-timestamp"
-                        type="button"
-                        aria-label={`${formatTimestamp(note.timestampSeconds)} 위치로 이동`}
-                        onClick={() => {
-                          if (video.playbackMode === "external") {
-                            window.open(
-                              createYouTubeWatchUrl(video.youtubeId, note.timestampSeconds),
-                              "_blank",
-                              "noopener,noreferrer",
-                            );
-                          } else {
-                            playerRef.current?.seekTo(note.timestampSeconds);
-                          }
-                        }}
-                      >
-                        {formatTimestamp(note.timestampSeconds)}
-                      </button>
-                      <p>{note.text}</p>
-                      <div className="note-actions">
+                    ) : (
+                      <>
                         <button
+                          className="note-timestamp"
                           type="button"
+                          aria-label={`${formatTimestamp(note.timestampSeconds)} 위치로 이동`}
                           onClick={() => {
-                            setEditingNoteId(note.id);
-                            setEditingText(note.text);
+                            if (video.playbackMode === "external") {
+                              window.open(
+                                createYouTubeWatchUrl(video.youtubeId, note.timestampSeconds),
+                                "_blank",
+                                "noopener,noreferrer",
+                              );
+                            } else {
+                              playerRef.current?.seekTo(note.timestampSeconds);
+                            }
                           }}
                         >
-                          수정
+                          {formatTimestamp(note.timestampSeconds)}
                         </button>
-                        <button type="button" onClick={() => handleDeleteNote(note.id)}>
-                          삭제
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
+                        <p>{note.text}</p>
+                        <div className="note-actions">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingNoteId(note.id);
+                              setEditingText(note.text);
+                            }}
+                          >
+                            수정
+                          </button>
+                          <button type="button" onClick={() => handleDeleteNote(note.id)}>
+                            삭제
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        </div>
         <p className="saved-video-id">YouTube 영상 · {video.youtubeId}</p>
       </article>
     </main>

@@ -26,7 +26,7 @@ export default defineConfig({
       NEXT_DIST_DIR: ".next-e2e",
     },
     url: "http://127.0.0.1:3100",
-    reuseExistingServer: false,
+    reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
 });

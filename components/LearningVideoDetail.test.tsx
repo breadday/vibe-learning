@@ -160,8 +160,24 @@ describe("LearningVideoDetail", () => {
     expect(screen.queryByLabelText("테스트 영상 플레이어")).not.toBeInTheDocument();
     expect(screen.getByLabelText("외부 재생 도구")).toBeInTheDocument();
     expect(document.querySelector(".detail-player-column")).not.toBeInTheDocument();
+    expect(document.querySelector(".saved-player")).not.toBeInTheDocument();
+    const workspace = document.querySelector(".external-learning-workspace");
+    const segments = screen.getByRole("region", { name: "학습 구간" });
+    const notes = screen.getByRole("region", { name: "개인 메모" });
+    expect(workspace).toContainElement(segments);
+    expect(workspace).toContainElement(notes);
+    expect(segments.parentElement).toBe(workspace);
+    expect(notes.parentElement).toBe(workspace);
+    expect(segments.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy();
+    expect(screen.getByLabelText("외부 재생 도구").closest(".external-learning-workspace"))
+      .toBeNull();
     expect(screen.getByRole("link", { name: "YouTube에서 보기" }))
       .toHaveAttribute("href", `https://www.youtube.com/watch?v=${videoId}`);
+    expect(screen.getByRole("link", { name: "YouTube에서 보기" }))
+      .toHaveAttribute("target", "_blank");
+    expect(screen.getByRole("link", { name: "YouTube에서 보기" }))
+      .toHaveAttribute("rel", "noreferrer");
   });
 
   it("saves an external position and uses it for a new note", () => {
@@ -213,6 +229,10 @@ describe("LearningVideoDetail", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "위치 저장" }));
     expect(screen.getByRole("alert")).toHaveTextContent("올바른 시간을 입력");
+    const saved = JSON.parse(
+      window.localStorage.getItem(learningStoreKey) ?? "null",
+    ) as LearningStore;
+    expect(saved.videos[0].playbackSeconds).toBe(0);
 
     fireEvent.click(screen.getByRole("button", { name: "[18:20] 위치로 이동" }));
     expect(open).toHaveBeenCalledWith(
@@ -220,6 +240,36 @@ describe("LearningVideoDetail", () => {
       "_blank",
       "noopener,noreferrer",
     );
+  });
+
+  it("returns to the embedded player without losing external learning data", () => {
+    const store = JSON.parse(
+      window.localStorage.getItem(learningStoreKey) ?? "null",
+    ) as LearningStore;
+    store.videos[0].playbackMode = "external";
+    store.videos[0].playbackSeconds = 245;
+    store.videos[0].notes = [{
+      id: "123e4567-e89b-42d3-a456-426614174000",
+      timestampSeconds: 245,
+      text: "보존할 메모",
+      createdAt: "2026-08-01T00:00:00.000Z",
+      updatedAt: "2026-08-01T00:00:00.000Z",
+    }];
+    window.localStorage.setItem(learningStoreKey, JSON.stringify(store));
+
+    render(<LearningVideoDetail />);
+    fireEvent.click(screen.getByRole("button", { name: "앱에서 재생 시도" }));
+
+    expect(screen.getByLabelText("테스트 영상 플레이어")).toBeInTheDocument();
+    expect(screen.getByText("보존할 메모")).toBeInTheDocument();
+    const saved = JSON.parse(
+      window.localStorage.getItem(learningStoreKey) ?? "null",
+    ) as LearningStore;
+    expect(saved.videos[0]).toMatchObject({
+      playbackMode: "embedded",
+      playbackSeconds: 245,
+    });
+    expect(saved.videos[0].notes).toHaveLength(1);
   });
 
   it("formats timestamps beyond one hour without losing minute padding", () => {

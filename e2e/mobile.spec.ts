@@ -18,8 +18,10 @@ test("has no horizontal overflow at 360px on home and detail pages", async ({
             title: "360px 모바일 검사 영상",
             normalizedUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
             status: "not-started",
+            playbackMode: "embedded",
             playbackSeconds: 0,
             notes: [],
+            segments: [],
             createdAt: "2026-08-29T00:00:00.000Z",
             updatedAt: "2026-08-29T00:00:00.000Z",
           },
@@ -44,6 +46,21 @@ test("has no horizontal overflow at 360px on home and detail pages", async ({
   await page.getByRole("button", { name: "YouTube에서 학습하기" }).click();
   await expect(page.getByRole("link", { name: "YouTube에서 보기" })).toBeVisible();
   await page.getByLabel("마지막 학습 위치").fill("12:43");
+  await expect(page.getByRole("button", { name: "위치 저장" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "앱에서 재생 시도" })).toBeVisible();
+  await page.getByLabel("구간 제목").fill(
+    "공백 없이도아주길게이어지는학습구간제목이모바일화면을밀어내지않는지확인",
+  );
+  await page.getByLabel("구간 시작 시간").fill("12:43");
+  await page.getByLabel("구간 종료 시간").fill("13:20");
+  await page.getByRole("button", { name: "구간 추가" }).click();
+  const [segmentsBox, notesBox] = await Promise.all([
+    page.getByRole("region", { name: "학습 구간" }).boundingBox(),
+    page.getByRole("region", { name: "개인 메모" }).boundingBox(),
+  ]);
+  expect(segmentsBox).not.toBeNull();
+  expect(notesBox).not.toBeNull();
+  expect(segmentsBox?.y ?? 0).toBeLessThan(notesBox?.y ?? 0);
   await expectNoHorizontalOverflow(page);
   await page.screenshot({ path: testInfo.outputPath("mobile-detail.png"), fullPage: true });
 });

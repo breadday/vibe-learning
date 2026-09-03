@@ -69,6 +69,8 @@
 
 최종 검증에서는 실패 항목이 없다.
 
+이후 TASK-010 독립 검토에서 `e2e/youtube-title.spec.ts`의 지연 응답 테스트에 경합 조건이 있는 것을 확인했다. 라우트 핸들러가 응답 해제 함수를 등록하기 전에 Playwright가 `releaseResponseRef.current?.()`를 호출하면 응답 Promise가 영원히 해제되지 않아 E2E 프로세스가 종료되지 않을 수 있었다. 이 문제는 `e2e/youtube-title.spec.ts`의 동기화만 개선하여 해결했으며, 제품 코드는 변경하지 않았다. 자세한 내용은 `docs/tasks/TASK-010-RESULT.md`를 참조한다.
+
 구현 중 `e2e/youtube-title.spec.ts`의 새로운 지연 응답 테스트에서 `releaseResponse` 변수의 TypeScript 추론 문제가 발생해 `releaseResponseRef` 객체 패턴으로 변경했다. 또한 기존 수동 폴백 테스트의 입력 제목과 기대 제목 문자가 편집 과정에서 달라지는 문제를 발견해 동일하게 맞췄다.
 
 TASK-007 검증 과정에서 `next-env.d.ts`가 E2E 실행으로 인해 `.next-e2e/dev`를 참조하도록 변경된 것을 확인했다. 이 파일은 Next.js가 `playwright.config.ts`의 `NEXT_DIST_DIR: ".next-e2e"` 설정으로 임시 생성한 부수 변경이며, 일반 개발·빌드·타입 검사에는 `.next/dev` 참조가 필요하므로 TASK-007 이전 상태로 복원했다.

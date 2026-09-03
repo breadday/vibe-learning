@@ -116,29 +116,43 @@ test("keeps a user-entered title when a delayed automatic response arrives", asy
   const delayedVideoId = "USERTITLE01";
   const automaticTitle = "자동 제목";
   const userTitle = "사용자 제목";
-  const releaseResponseRef: { current: (() => void) | null } = { current: null };
+
+  const requestStarted = Promise.withResolvers<void>();
+  const releaseResponse = Promise.withResolvers<void>();
+  const responseCompleted = Promise.withResolvers<void>();
+  let responseReleased = false;
 
   await page.route("**/api/youtube-title?**", async (route) => {
-    await new Promise<void>((resolve) => {
-      releaseResponseRef.current = () => resolve();
-    });
+    requestStarted.resolve();
+    await releaseResponse.promise;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ title: automaticTitle }),
     });
+    responseCompleted.resolve();
   });
 
-  await page.goto("/");
-  await page
-    .getByLabel("YouTube 주소를 붙여 넣으세요")
-    .fill(`https://youtu.be/${delayedVideoId}`);
-  await page.getByText("영상 제목을 가져오는 중입니다.").waitFor();
-  await page.getByLabel("학습 제목").fill(userTitle);
+  try {
+    await page.goto("/");
+    await page
+      .getByLabel("YouTube 주소를 붙여 넣으세요")
+      .fill(`https://youtu.be/${delayedVideoId}`);
+    await requestStarted.promise;
+    await page.getByText("영상 제목을 가져오는 중입니다.").waitFor();
+    await page.getByLabel("학습 제목").fill(userTitle);
 
-  releaseResponseRef.current?.();
-  await expect(page.getByLabel("학습 제목")).toHaveValue(userTitle);
-  await expect(
-    page.getByText("영상 제목을 자동으로 입력했습니다. 필요하면 수정할 수 있습니다."),
-  ).not.toBeVisible();
+    responseReleased = true;
+    releaseResponse.resolve();
+    await responseCompleted.promise;
+    await expect(page.getByText("영상 제목을 가져오는 중입니다.")).not.toBeVisible();
+    await expect(page.getByLabel("학습 제목")).toHaveValue(userTitle);
+    await expect(
+      page.getByText("영상 제목을 자동으로 입력했습니다. 필요하면 수정할 수 있습니다."),
+    ).not.toBeVisible();
+  } finally {
+    if (!responseReleased) {
+      releaseResponse.resolve();
+    }
+  }
 });

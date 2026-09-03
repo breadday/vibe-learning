@@ -29,7 +29,8 @@ export function AddVideoForm() {
     useState<TitleLookupStatus>("idle");
   const titleOriginRef = useRef<TitleOrigin>("empty");
   const requestSequenceRef = useRef(0);
-  const attemptedVideoIdsRef = useRef(new Set<string>());
+  const automaticTitleCacheRef = useRef(new Map<string, string>());
+  const inFlightVideoIdRef = useRef<string | null>(null);
   const parseResult = urlInput.trim() ? parseYouTubeUrl(urlInput) : null;
   const videoId = parseResult?.ok ? parseResult.videoId : null;
   const canSubmit = parseResult?.ok === true && title.trim().length > 0;
@@ -38,12 +39,26 @@ export function AddVideoForm() {
     const requestSequence = ++requestSequenceRef.current;
     const controller = new AbortController();
 
-    if (!videoId || attemptedVideoIdsRef.current.has(videoId)) {
+    if (!videoId) {
+      return () => controller.abort();
+    }
+
+    const cachedTitle = automaticTitleCacheRef.current.get(videoId);
+    if (cachedTitle !== undefined) {
+      if (titleOriginRef.current !== "user") {
+        titleOriginRef.current = "automatic";
+        setTitle(cachedTitle);
+        setTitleLookupStatus("success");
+      }
+      return () => controller.abort();
+    }
+
+    if (inFlightVideoIdRef.current === videoId) {
       return () => controller.abort();
     }
 
     const timeoutId = window.setTimeout(async () => {
-      attemptedVideoIdsRef.current.add(videoId);
+      inFlightVideoIdRef.current = videoId;
       setTitleLookupStatus("loading");
 
       try {
@@ -51,6 +66,17 @@ export function AddVideoForm() {
           `/api/youtube-title?videoId=${encodeURIComponent(videoId)}`,
           { signal: controller.signal },
         );
+
+        if (inFlightVideoIdRef.current === videoId) {
+          inFlightVideoIdRef.current = null;
+        }
+
+        if (
+          requestSequence !== requestSequenceRef.current ||
+          controller.signal.aborted
+        ) {
+          return;
+        }
 
         if (!response.ok) {
           throw new Error("title lookup failed");
@@ -69,19 +95,19 @@ export function AddVideoForm() {
           throw new Error("invalid title response");
         }
 
-        if (
-          requestSequence !== requestSequenceRef.current ||
-          controller.signal.aborted
-        ) {
-          return;
-        }
+        automaticTitleCacheRef.current.set(videoId, automaticTitle);
 
         if (titleOriginRef.current !== "user") {
           titleOriginRef.current = "automatic";
           setTitle(automaticTitle);
+          setTitleLookupStatus("success");
+        } else {
+          setTitleLookupStatus("idle");
         }
-        setTitleLookupStatus("success");
       } catch {
+        if (inFlightVideoIdRef.current === videoId) {
+          inFlightVideoIdRef.current = null;
+        }
         if (
           requestSequence === requestSequenceRef.current &&
           !controller.signal.aborted
@@ -94,6 +120,9 @@ export function AddVideoForm() {
     return () => {
       window.clearTimeout(timeoutId);
       controller.abort();
+      if (inFlightVideoIdRef.current === videoId) {
+        inFlightVideoIdRef.current = null;
+      }
     };
   }, [videoId]);
 

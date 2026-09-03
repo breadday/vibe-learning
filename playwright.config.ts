@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const e2ePort = 3300;
+const baseURL = `http://localhost:${e2ePort}`;
+
 export default defineConfig({
   testDir: "./e2e",
   expect: { timeout: 15_000 },
@@ -9,7 +12,7 @@ export default defineConfig({
   reporter: "html",
   workers: 1,
   use: {
-    baseURL: "http://localhost:3100",
+    baseURL,
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
   },
@@ -20,13 +23,13 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev -- --hostname localhost --port 3100",
+    command: `npm run dev -- --hostname localhost --port ${e2ePort}`,
     env: {
       ...process.env,
       NEXT_DIST_DIR: ".next-e2e",
     },
-    url: "http://localhost:3100",
-    reuseExistingServer: !process.env.CI,
+    url: baseURL,
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

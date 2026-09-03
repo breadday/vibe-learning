@@ -80,3 +80,7 @@ git diff -- next-env.d.ts
 ## 커밋·배포 확인
 
 요청하지 않은 커밋과 배포는 수행하지 않았다.
+
+## 후속 보정 참고 (TASK-011)
+
+TASK-010에서 `next-env.d.ts`를 검증 후 수동으로 `.next/dev` 참조로 복원했다. 이후 TASK-011에서 근본 원인(NEXT_DIST_DIR 오염 + 명령별 생성 경로 차이)을 확인하고, `next-env.d.ts`를 Git 추적 해제·`.gitignore` 처리하는 방식으로 수동 복원 절차를 대체했다. 이에 따라 위 `next-env.d.ts` 복원 기록은 TASK-011 이후 더 이상 필요하지 않다. 기존 기록은 사실 기록으로 유지하며, 해당 후속 작업 문서는 `docs/tasks/TASK-011-RESULT.md`를 참고한다.

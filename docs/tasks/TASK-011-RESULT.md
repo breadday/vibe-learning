@@ -84,7 +84,7 @@ export default defineConfig({
    - 기존 서버를 재사용하지 않으므로 현재 작업 트리 검증 보장이 단단해진다.
 
 2. E2E 전용 포트 `3300` 사용
-   - 개발 서버 기본 포트(`3100`)와 분리해 다른 실행 세션의 서버가 있어도 E2E가 자체 서버를 띄울 수 있게 했다.
+   - 기존 E2E 포트(`3100`)와 분리해 이전 실행 세션의 서버가 있어도 E2E가 자체 서버를 띄울 수 있게 했다.
    - `e2ePort` 상수 하나로 `baseURL`과 `webServer.url`을 동일하게 맞춰 프록시·E2E 기대값 기준을 하나로 통일했다. 동적 포트가 아니라 고정 포트이므로 일관성 요건을 만족한다.
 
 3. `NEXT_DIST_DIR: ".next-e2e"` 유지
@@ -96,6 +96,11 @@ export default defineConfig({
    - `docs/`의 공식 안내(생성 파일, `.gitignore` 추가·Git 제거 권장)와 위 소스 분석에 근거해 적용했다.
    - `git rm --cached next-env.d.ts`로 추적을 해제하고 `.gitignore`에 `next-env.d.ts`를 추가했다. 파일은 디스크에 그대로 남지만 Git에는 더 이상 오염되지 않는다.
    - 이로써 매번 수동복원(`git restore`)하던 방식을 영구적으로 없앴다. 테스트 뒤 자동 복원 명령은 사용하지 않았다.
+
+5. 새 클론 타입 생성 경로 보완
+   - 설치된 Next.js 문서는 타입 검사 전에 `next typegen`을 실행해 `next-env.d.ts`와 route types를 생성하라고 안내한다.
+   - `npm run typecheck`를 `next typegen && tsc --noEmit`으로 변경해 로컬과 CI 모두 새 클론에서도 같은 순서로 타입을 검사하도록 했다.
+   - CI 단계 이름도 `Generate Next.js types and type check`로 바꿔 생성 단계가 명시적으로 드러나게 했다.
 
 ## 3. 포트 충돌 시 동작
 
@@ -139,8 +144,11 @@ export default defineConfig({
 | `playwright.config.ts` | E2E 전용 포트 3300, `reuseExistingServer: false`, `baseURL`·`webServer.url`·`command` 동일 포트로 통일, `.next-e2e` 유지 |
 | `.gitignore` | `next-env.d.ts` 추가 |
 | `next-env.d.ts` | `git rm --cached`로 추적 해제 (디스크에는 유지) |
+| `package.json` | `typecheck`가 `next typegen` 후 `tsc --noEmit`을 실행하도록 변경 |
+| `.github/workflows/ci.yml` | 새 클론 타입 생성을 포함하도록 타입 검사 단계 이름 명시 |
 | `docs/tasks/TASK-011-RESULT.md` | 본 결과서 작성 |
 | `docs/tasks/TASK-010-RESULT.md` | 후속 보정 참고 추가 |
+| `docs/.obsidian/workspace.json` | TASK-011 커밋에 잘못 포함된 개인 작업 공간 상태 제거 |
 
 제품 코드(`components/`, `lib/storage/`, `app/api/youtube-title/`), Route Handler, 저장 스키마는 변경하지 않았다.
 
@@ -149,7 +157,8 @@ export default defineConfig({
 | 검증 | 명령 | 최종 결과 |
 |---|---|---|
 | 린트 | `npm run lint` | 성공, 종료 코드 0 |
-| 타입 | `npm run typecheck` | 성공, 종료 코드 0 |
+| 타입 | `npm run typecheck` | 성공, `next typegen` 후 TypeScript 검사, 종료 코드 0 |
+| 새 클론 타입 | detached worktree에서 `npm ci && npm run typecheck` | `next-env.d.ts`가 없는 상태에서 타입 생성 후 성공, 종료 코드 0 |
 | 단위·컴포넌트 | `npm test` | 15개 파일, 126개 테스트 통과, 종료 코드 0 |
 | 프로덕션 빌드 | `npm run build -- --webpack` | 성공, Next.js 16.3.2, 종료 코드 0 |
 | E2E | `npm run test:e2e -- --reporter=line` | 12개 통과, 종료 코드 0 |
@@ -160,10 +169,12 @@ export default defineConfig({
 ## 9. 실패 항목과 남은 위험
 
 - 실패 항목은 없다.
-- `next-env.d.ts`가 이제 Git에서 추적되지 않는다. 신규 클론에서는 커밋에 파일이 없으므로 최초 `next dev`/`next build`/`next typegen`을 실행하기 전에 `tsc --noEmit`(typecheck)만 돌리면 생성형 전역 타입이 없어 타입 에러가 날 수 있다. CI에서 `typecheck`를 먼저 수행한다면 `next typegen` 또는 `next build`를 선행해야 한다. 이 워크스페이스에는 파일이 디스크에 존재해 typecheck가 통과했다.
+- `next-env.d.ts`는 Git에서 추적하지 않지만 `npm run typecheck`가 `next typegen`을 먼저 실행하므로 신규 클론과 CI에서도 필요한 생성형 타입을 준비한 뒤 검사한다.
 - E2E는 고정 전용 포트 `3300`을 사용한다. 향후 3300이 다른 서비스에 점유되면 명확한 에러로 실패한다(사용자 프로세스는 종료하지 않음). 더 견고한 격리가 필요하면 실행별 동적 포트 방식을 고려할 수 있다.
 - E2E는 여전히 별도 `.next-e2e` 빌드 디렉터리를 사용한다. `.next`를 사용하는 개발 서버와 동시에 돌려도 충돌하지 않도록 하기 위한 의도된 설정이며, `.next-e2e`는 `.gitignore`에 이미 포함돼 있다.
 
 ## 10. 커밋·배포 확인
 
-요청하지 않은 커밋과 배포는 수행하지 않았다.
+TASK-011의 최초 변경은 커밋 `a39e581`(`chore: E2E 테스트 포트 분리 및 next-env.d.ts 추적 제외 설정`)로 커밋됐고, 현재 로컬 `main`과 `origin/main`이 해당 커밋을 가리키므로 push도 완료됐다. 이 결과서의 기존 "커밋을 수행하지 않았다" 기록은 실제 저장소 상태와 달라 정정했다.
+
+후속 검토에서 추가한 새 클론 타입 생성 경로, Obsidian 상태 제거와 본 기록 정정은 아직 커밋하거나 push하지 않았다. 저장소에는 `Verify` CI 워크플로만 있고 배포 워크플로는 없다. 외부 배포 플랫폼 상태는 현재 환경에 `gh` CLI가 없어 별도로 조회하지 못했으므로 배포 여부를 단정하지 않는다.

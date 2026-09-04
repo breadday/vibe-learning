@@ -83,6 +83,8 @@ describe("LearningWorkspace", () => {
           routeCardTitle: "학습 로드맵",
           segmentCtaLabel: "구간 재생 →",
           sideNoteSummary: "시작 전 확인",
+          totalSteps: 4,
+          stepLabels: ["요약", "구간", "실습", "마무리"],
           statsLabels: { duration: "총 길이", required: "핵심 길이", steps: "단계 수" },
         })}
       />,
@@ -111,6 +113,7 @@ describe("LearningWorkspace", () => {
     expect(screen.getByText("총 길이")).toBeInTheDocument();
     expect(screen.getByText("핵심 길이")).toBeInTheDocument();
     expect(screen.getByText("단계 수")).toBeInTheDocument();
+    expect(screen.getByText("4단계")).toBeInTheDocument();
     expect(screen.queryByText("전체 영상")).toBeNull();
     expect(screen.queryByText("오늘의 학습 순서")).toBeNull();
     expect(screen.queryByText("AI 호출 없이 저장된 검수 자료로 학습합니다.")).toBeNull();

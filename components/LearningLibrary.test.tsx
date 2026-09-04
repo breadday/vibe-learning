@@ -1,11 +1,13 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LearningLibrary } from "./LearningLibrary";
 import {
   learningStoreKey,
+  loadLearningStore,
   type LearningStore,
   type LearningVideo,
 } from "../lib/storage/learningStore";
+import { removeLearningRecord } from "../lib/storage/idb";
 
 function video(
   youtubeId: string,
@@ -38,53 +40,57 @@ function store(): LearningStore {
   return { schemaVersion: 1, videos, lastOpenedVideoId: "BBBBBBBBBBB" };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await removeLearningRecord();
   window.localStorage.clear();
   window.localStorage.setItem(learningStoreKey, JSON.stringify(store()));
   vi.restoreAllMocks();
 });
 
 describe("LearningLibrary", () => {
-  it("shows the last unfinished video as the single continue item", () => {
+  it("shows the last unfinished video as the single continue item", async () => {
     render(<LearningLibrary />);
 
-    const section = screen.getByText("이어서 학습").closest("section");
+    const section = (await screen.findByText("이어서 학습")).closest("section");
     expect(section).not.toBeNull();
     expect(within(section as HTMLElement).getByText("이어서 볼 영상")).toBeInTheDocument();
     expect(within(section as HTMLElement).getAllByRole("article")).toHaveLength(1);
   });
 
-  it("sorts the full list by most recently updated", () => {
+  it("sorts the full list by most recently updated", async () => {
     render(<LearningLibrary />);
 
-    const section = screen.getByText("전체 학습 목록").closest("section");
+    const section = (await screen.findByText("전체 학습 목록")).closest("section");
     const titles = within(section as HTMLElement)
       .getAllByRole("heading", { level: 3 })
       .map((heading) => heading.textContent);
     expect(titles).toEqual(["최근 수정 영상", "오래된 영상", "이어서 볼 영상"]);
   });
 
-  it("keeps a video when deletion is cancelled", () => {
+  it("keeps a video when deletion is cancelled", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
     render(<LearningLibrary />);
 
-    const section = screen.getByText("전체 학습 목록").closest("section");
+    const section = (await screen.findByText("전체 학습 목록")).closest("section");
     fireEvent.click(within(section as HTMLElement).getAllByRole("button", { name: "삭제" })[0]);
 
-    expect(JSON.parse(window.localStorage.getItem(learningStoreKey) ?? "null")).toEqual(store());
+    expect(await loadLearningStore()).toEqual(store());
   });
 
-  it("deletes a confirmed video and keeps the change after remount", () => {
+  it("deletes a confirmed video and keeps the change after remount", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const { unmount } = render(<LearningLibrary />);
 
-    const section = screen.getByText("전체 학습 목록").closest("section");
+    const section = (await screen.findByText("전체 학습 목록")).closest("section");
     const newestCard = within(section as HTMLElement).getByText("최근 수정 영상").closest("article");
     fireEvent.click(within(newestCard as HTMLElement).getByRole("button", { name: "삭제" }));
-    expect(within(section as HTMLElement).queryByText("최근 수정 영상")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(section as HTMLElement).queryByText("최근 수정 영상")).not.toBeInTheDocument();
+    });
 
     unmount();
     render(<LearningLibrary />);
+    await screen.findByText("전체 학습 목록");
     expect(screen.queryAllByText("최근 수정 영상")).toHaveLength(0);
   });
 });

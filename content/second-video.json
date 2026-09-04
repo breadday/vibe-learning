@@ -37,6 +37,13 @@
     "segmentCtaLabel": "구간 재생 →",
     "valueCopyPrefix": "분 안에",
     "sideNoteSummary": "시작하기 전에",
+    "totalSteps": 4,
+    "stepLabels": [
+      "핵심 파악",
+      "구간 선택",
+      "따라하기",
+      "디자인 마무리"
+    ],
     "statsLabels": {
       "duration": "전체 길이",
       "required": "필수 구간",

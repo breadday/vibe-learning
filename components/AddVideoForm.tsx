@@ -143,14 +143,14 @@ export function AddVideoForm() {
     setSaveError(null);
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!canSubmit || !parseResult?.ok) {
       return;
     }
 
-    const store = loadLearningStore();
+    const store = await loadLearningStore();
     const duplicate = store.videos.find(
       (video) => video.youtubeId === parseResult.videoId,
     );
@@ -162,7 +162,7 @@ export function AddVideoForm() {
     }
 
     const now = new Date().toISOString();
-    const saveResult = saveLearningStore({
+    const saveResult = await saveLearningStore({
       ...store,
       videos: [
         ...store.videos,

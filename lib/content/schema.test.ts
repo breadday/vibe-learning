@@ -63,6 +63,8 @@ describe("videoContentSchema", () => {
         segmentCtaLabel: "이 구간 보기 →",
         valueCopyPrefix: "분 안에",
         sideNoteSummary: "학습 전 꼭 확인",
+        totalSteps: 3,
+        stepLabels: ["이해하기", "골라 보기", "직접 해보기"],
         statsLabels: { duration: "전체 영상", required: "필수 구간", steps: "학습 과정" },
       },
     };
@@ -106,6 +108,30 @@ describe("videoContentSchema", () => {
       },
     };
     expect(videoContentSchema.safeParse(blankNavLabel).success).toBe(false);
+
+    const zeroTotalSteps = {
+      ...validContent(),
+      video: { ...validContent().video, totalSteps: 0 },
+    };
+    expect(videoContentSchema.safeParse(zeroTotalSteps).success).toBe(false);
+
+    const elevenTotalSteps = {
+      ...validContent(),
+      video: { ...validContent().video, totalSteps: 11 },
+    };
+    expect(videoContentSchema.safeParse(elevenTotalSteps).success).toBe(false);
+
+    const twoStepLabels = {
+      ...validContent(),
+      video: { ...validContent().video, stepLabels: ["핵심", "구간"] },
+    };
+    expect(videoContentSchema.safeParse(twoStepLabels).success).toBe(false);
+
+    const blankStepLabel = {
+      ...validContent(),
+      video: { ...validContent().video, stepLabels: ["핵심", "   ", "실습"] },
+    };
+    expect(videoContentSchema.safeParse(blankStepLabel).success).toBe(false);
 
     const navItemWithoutHref = {
       ...validContent(),

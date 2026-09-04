@@ -6,7 +6,6 @@ import { CopyBlock } from "@/components/CopyBlock";
 import { SourceList } from "@/components/SourceList";
 
 const labels = { required: "필수", optional: "선택", reference: "참고" } as const;
-const STEP_COUNT = 3;
 
 const defaultKeyPoints = [
   "코딩 에이전트는 답변을 넘어 파일을 읽고 수정하며 테스트까지 실행합니다.",
@@ -63,7 +62,7 @@ export function LearningWorkspace({ content, mdxContent }: { content: VideoConte
   return <main>
     <header className="site-header"><a className="brand" href="#top"><span>V</span> Vibe Learning</a><nav aria-label="학습 메뉴">{navItems.map((item) => <a key={item.href} href={item.href}>{item.label}</a>)}</nav></header>
     <article id="top" className="learning-page">
-      <section className="intro-grid"><div className="hero-copy"><p className="context-label">{contextLabel}</p><h1>{video.title}</h1><p className="value-copy">{introCopy}</p><div className="learning-stats" aria-label="학습 시간"><span><strong>{Math.ceil((video.durationSeconds ?? 0) / 60)}분</strong>{statsLabels.duration}</span><span><strong>{Math.ceil(requiredSeconds / 60)}분</strong>{statsLabels.required}</span><span><strong>{STEP_COUNT}단계</strong>{statsLabels.steps}</span></div><div className="hero-actions"><button onClick={() => moveToSegment(segments[0]?.startSeconds ?? 0)}>{heroPrimaryCta}</button><a href="#summary">{heroSecondaryCta}</a></div></div>
+      <section className="intro-grid"><div className="hero-copy"><p className="context-label">{contextLabel}</p><h1>{video.title}</h1><p className="value-copy">{introCopy}</p><div className="learning-stats" aria-label="학습 시간"><span><strong>{Math.ceil((video.durationSeconds ?? 0) / 60)}분</strong>{statsLabels.duration}</span><span><strong>{Math.ceil(requiredSeconds / 60)}분</strong>{statsLabels.required}</span><span><strong>{video.totalSteps ?? 3}단계</strong>{statsLabels.steps}</span></div><div className="hero-actions"><button onClick={() => moveToSegment(segments[0]?.startSeconds ?? 0)}>{heroPrimaryCta}</button><a href="#summary">{heroSecondaryCta}</a></div></div>
         <aside className="route-card"><span>{routeCardTitle}</span><ol>{routeCardSteps.map((step) => <li key={step.title}><b>{step.title}</b><small>{step.small}</small></li>)}</ol></aside></section>
       <section id="video" className="video-shell">{playerSrc ? <iframe key={startSeconds} src={playerSrc} title={video.title ?? "YouTube 학습 영상"} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /> : <p>영상 연결 대기</p>}</section>
       {mdxContent ? <section className="mdx-section">{mdxContent}</section> : null}

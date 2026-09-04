@@ -40,6 +40,8 @@ const videoSchema = z.object({
   segmentCtaLabel: nonEmptyText.nullable().optional(),
   valueCopyPrefix: nonEmptyText.nullable().optional(),
   sideNoteSummary: nonEmptyText.nullable().optional(),
+  totalSteps: z.number().int().min(1).max(10).nullable().optional(),
+  stepLabels: z.array(nonEmptyText).min(3).max(10).nullable().optional(),
   statsLabels: z.object({
     duration: nonEmptyText,
     required: nonEmptyText,

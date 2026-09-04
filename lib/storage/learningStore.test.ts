@@ -1,8 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import * as idb from "./idb";
+import {
+  readLearningRecord,
+  removeLearningRecord,
+  writeLearningRecord,
+} from "./idb";
 import {
   createLearningId,
   createEmptyLearningStore,
-  learningStorageQuotaBytes,
   learningStoreKey,
   learningStoreWarningEvent,
   loadLearningStore,
@@ -50,30 +55,32 @@ function populatedStore(): LearningStore {
   };
 }
 
-afterEach(() => {
+afterEach(async () => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   window.localStorage.clear();
+  await removeLearningRecord();
 });
 
 describe("learningStore", () => {
-  it("returns a new empty v1 store when no data exists", () => {
-    expect(loadLearningStore()).toEqual(createEmptyLearningStore());
-    expect(loadLearningStore()).not.toBe(loadLearningStore());
+  it("returns a new empty v1 store when no data exists", async () => {
+    const first = await loadLearningStore();
+    const second = await loadLearningStore();
+    expect(first).toEqual(createEmptyLearningStore());
+    expect(first).not.toBe(second);
   });
 
-  it("saves and loads the complete store through the versioned key", () => {
+  it("saves and loads the complete store through the versioned key", async () => {
     const store = populatedStore();
 
-    expect(saveLearningStore(store)).toEqual({ ok: true });
-    expect(window.localStorage.getItem(learningStoreKey)).toBe(
-      JSON.stringify(store),
-    );
-    expect(loadLearningStore()).toEqual(store);
+    expect(await saveLearningStore(store)).toEqual({ ok: true });
+    expect(await readLearningRecord()).toBe(JSON.stringify(store));
+    expect(window.localStorage.getItem(learningStoreKey)).toBeNull();
+    expect(await loadLearningStore()).toEqual(store);
   });
 
-  it("rejects invalid data before writing to browser storage", () => {
-    const setItem = vi.spyOn(Storage.prototype, "setItem");
+  it("rejects invalid data before writing to browser storage", async () => {
+    const writeRecord = vi.spyOn(idb, "writeLearningRecord");
     const invalidStore = {
       ...populatedStore(),
       videos: [
@@ -84,14 +91,14 @@ describe("learningStore", () => {
       ],
     } as LearningStore;
 
-    expect(saveLearningStore(invalidStore)).toEqual({
+    expect(await saveLearningStore(invalidStore)).toEqual({
       ok: false,
       reason: "invalid-data",
     });
-    expect(setItem).not.toHaveBeenCalled();
+    expect(writeRecord).not.toHaveBeenCalled();
   });
 
-  it("applies defaults when loading legacy v1 video data", () => {
+  it("migrates legacy localStorage data with defaults and removes it", async () => {
     const legacyStore = populatedStore();
     const legacyVideo = { ...legacyStore.videos[0] } as Partial<LearningStore["videos"][number]>;
     delete legacyVideo.playbackSeconds;
@@ -102,22 +109,37 @@ describe("learningStore", () => {
       JSON.stringify({ ...legacyStore, videos: [legacyVideo] }),
     );
 
-    expect(loadLearningStore().videos[0]).toMatchObject({
+    expect((await loadLearningStore()).videos[0]).toMatchObject({
       playbackMode: "embedded",
       playbackSeconds: 0,
       notes: [],
       segments: [],
     });
+    expect(window.localStorage.getItem(learningStoreKey)).toBeNull();
+    expect(await readLearningRecord()).not.toBeNull();
   });
 
-  it("persists learning segments and rejects invalid ranges", () => {
+  it("keeps legacy localStorage data when IndexedDB migration fails", async () => {
+    const legacyStore = populatedStore();
+    const serialized = JSON.stringify(legacyStore);
+    window.localStorage.setItem(learningStoreKey, serialized);
+    vi.spyOn(idb, "writeLearningRecord").mockRejectedValueOnce(
+      new DOMException("Access denied", "SecurityError"),
+    );
+
+    expect(await loadLearningStore()).toEqual(legacyStore);
+    expect(window.localStorage.getItem(learningStoreKey)).toBe(serialized);
+    expect(await readLearningRecord()).toBeNull();
+  });
+
+  it("persists learning segments and rejects invalid ranges", async () => {
     const store = populatedStore();
     store.videos[0].segments = [segment(10, 25)];
-    expect(saveLearningStore(store)).toEqual({ ok: true });
-    expect(loadLearningStore().videos[0].segments).toEqual([segment(10, 25)]);
+    expect(await saveLearningStore(store)).toEqual({ ok: true });
+    expect((await loadLearningStore()).videos[0].segments).toEqual([segment(10, 25)]);
 
     store.videos[0].segments = [segment(25, 10)];
-    expect(saveLearningStore(store)).toEqual({ ok: false, reason: "invalid-data" });
+    expect(await saveLearningStore(store)).toEqual({ ok: false, reason: "invalid-data" });
   });
 
   it("updates only the selected video without mutating the source", () => {
@@ -140,25 +162,25 @@ describe("learningStore", () => {
   it.each([
     { text: " ", reason: "blank note" },
     { text: "a".repeat(2_001), reason: "long note" },
-  ])("rejects a $reason", ({ text }) => {
+  ])("rejects a $reason", async ({ text }) => {
     const store = populatedStore();
     store.videos[0].notes = [note("00000000-0000-4000-8000-000000000001", text)];
-    expect(saveLearningStore(store)).toEqual({ ok: false, reason: "invalid-data" });
+    expect(await saveLearningStore(store)).toEqual({ ok: false, reason: "invalid-data" });
   });
 
-  it("rejects more than 500 notes and duplicate note IDs", () => {
+  it("rejects more than 500 notes and duplicate note IDs", async () => {
     const tooMany = populatedStore();
     tooMany.videos[0].notes = Array.from({ length: 501 }, (_, index) =>
       note(`00000000-0000-4000-8000-${String(index).padStart(12, "0")}`, "메모"),
     );
-    expect(saveLearningStore(tooMany)).toEqual({ ok: false, reason: "invalid-data" });
+    expect(await saveLearningStore(tooMany)).toEqual({ ok: false, reason: "invalid-data" });
 
     const duplicates = populatedStore();
     duplicates.videos[0].notes = [
       note("00000000-0000-4000-8000-000000000001", "첫 메모"),
       note("00000000-0000-4000-8000-000000000001", "둘째 메모"),
     ];
-    expect(saveLearningStore(duplicates)).toEqual({ ok: false, reason: "invalid-data" });
+    expect(await saveLearningStore(duplicates)).toEqual({ ok: false, reason: "invalid-data" });
   });
 
   it.each([
@@ -174,45 +196,45 @@ describe("learningStore", () => {
         },
       ],
     }),
-  ])("recovers from corrupted stored data", (storedValue) => {
-    window.localStorage.setItem(learningStoreKey, storedValue);
+  ])("recovers from corrupted stored data", async (storedValue) => {
+    await writeLearningRecord(storedValue);
 
-    expect(loadLearningStore()).toEqual(createEmptyLearningStore());
+    expect(await loadLearningStore()).toEqual(createEmptyLearningStore());
   });
 
-  it("does not access window during server rendering", () => {
+  it("does not access window during server rendering", async () => {
     vi.stubGlobal("window", undefined);
 
-    expect(loadLearningStore()).toEqual(createEmptyLearningStore());
-    expect(saveLearningStore(populatedStore())).toEqual({
+    expect(await loadLearningStore()).toEqual(createEmptyLearningStore());
+    expect(await saveLearningStore(populatedStore())).toEqual({
       ok: false,
       reason: "storage-unavailable",
     });
   });
 
-  it("reports storage capacity errors without throwing", () => {
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new DOMException("Storage is full", "QuotaExceededError");
-    });
+  it("reports storage capacity errors without throwing", async () => {
+    vi.spyOn(idb, "writeLearningRecord").mockRejectedValueOnce(
+      new DOMException("Storage is full", "QuotaExceededError"),
+    );
 
-    expect(saveLearningStore(populatedStore())).toEqual({
+    expect(await saveLearningStore(populatedStore())).toEqual({
       ok: false,
       reason: "quota-exceeded",
     });
   });
 
-  it("handles unavailable browser storage without throwing", () => {
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-      throw new DOMException("Access denied", "SecurityError");
-    });
+  it("handles unavailable browser storage without throwing", async () => {
+    vi.spyOn(idb, "readLearningRecord").mockRejectedValueOnce(
+      new DOMException("Access denied", "SecurityError"),
+    );
 
-    expect(loadLearningStore()).toEqual(createEmptyLearningStore());
+    expect(await loadLearningStore()).toEqual(createEmptyLearningStore());
 
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new DOMException("Access denied", "SecurityError");
-    });
+    vi.spyOn(idb, "writeLearningRecord").mockRejectedValueOnce(
+      new DOMException("Access denied", "SecurityError"),
+    );
 
-    expect(saveLearningStore(populatedStore())).toEqual({
+    expect(await saveLearningStore(populatedStore())).toEqual({
       ok: false,
       reason: "storage-unavailable",
     });
@@ -220,28 +242,30 @@ describe("learningStore", () => {
 });
 
 describe("learningStorageUsage", () => {
-  it("measures empty usage as zero bytes below the warning threshold", () => {
-    expect(measureLearningStorageUsage()).toEqual({
+  it("measures browser storage usage below the warning threshold", async () => {
+    stubStorageEstimate(0, 1_000_000);
+
+    expect(await measureLearningStorageUsage()).toEqual({
       bytes: 0,
-      quotaBytes: learningStorageQuotaBytes,
+      quotaBytes: 1_000_000,
       usedRatio: 0,
       overThreshold: false,
     });
 
-    expect(saveLearningStore(populatedStore())).toEqual({ ok: true });
-    expect(measureLearningStorageUsage()?.overThreshold).toBe(false);
+    expect(await saveLearningStore(populatedStore())).toEqual({ ok: true });
+    expect((await measureLearningStorageUsage())?.overThreshold).toBe(false);
   });
 
-  it("flags stored data once it crosses the warning threshold", () => {
-    const bytes = Math.floor(learningStorageQuotaBytes * 0.9);
-    window.localStorage.setItem(learningStoreKey, "x".repeat(bytes));
+  it("flags browser storage once it crosses the warning threshold", async () => {
+    stubStorageEstimate(900_000, 1_000_000);
 
-    const usage = measureLearningStorageUsage();
-    expect(usage?.bytes).toBe(bytes);
+    const usage = await measureLearningStorageUsage();
+    expect(usage?.bytes).toBe(900_000);
     expect(usage?.overThreshold).toBe(true);
   });
 
-  it("warns through an event and the console when a save exceeds the threshold", () => {
+  it("warns through an event and the console when a save exceeds the threshold", async () => {
+    stubStorageEstimate(900_000, 1_000_000);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const warnings: LearningStorageUsage[] = [];
     const handleWarning = (event: Event) => {
@@ -250,13 +274,11 @@ describe("learningStorageUsage", () => {
     window.addEventListener(learningStoreWarningEvent, handleWarning);
 
     try {
-      expect(saveLearningStore(oversizedStore())).toEqual({ ok: true });
+      expect(await saveLearningStore(populatedStore())).toEqual({ ok: true });
 
       expect(warnings).toHaveLength(1);
       expect(warnings[0]?.overThreshold).toBe(true);
-      expect(warnings[0]?.bytes).toBeGreaterThan(
-        learningStorageQuotaBytes * 0.8,
-      );
+      expect(warnings[0]?.bytes).toBe(900_000);
       expect(warnSpy).toHaveBeenCalledTimes(1);
     } finally {
       window.removeEventListener(learningStoreWarningEvent, handleWarning);
@@ -264,37 +286,13 @@ describe("learningStorageUsage", () => {
   });
 });
 
-function oversizedStore(): LearningStore {
-  const noteText = "가".repeat(2_000);
-
-  return {
-    schemaVersion: 1,
-    videos: Array.from({ length: 720 }, (_, index) => {
-      const youtubeId = `T${String(index).padStart(10, "0")}`;
-
-      return {
-        youtubeId,
-        title: `테스트 영상 ${index}`,
-        normalizedUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
-        status: "not-started" as const,
-        playbackMode: "embedded" as const,
-        playbackSeconds: 0,
-        notes: [
-          {
-            id: createLearningId(),
-            timestampSeconds: 0,
-            text: noteText,
-            createdAt: "2026-08-29T10:00:00.000Z",
-            updatedAt: "2026-08-29T10:00:00.000Z",
-          },
-        ],
-        segments: [],
-        createdAt: "2026-08-29T10:00:00.000Z",
-        updatedAt: "2026-08-29T10:00:00.000Z",
-      };
-    }),
-    lastOpenedVideoId: "T0000000000",
-  };
+function stubStorageEstimate(usage: number, quota: number) {
+  vi.stubGlobal("navigator", {
+    ...window.navigator,
+    storage: {
+      estimate: vi.fn().mockResolvedValue({ usage, quota }),
+    },
+  });
 }
 
 function note(id: string, text: string) {

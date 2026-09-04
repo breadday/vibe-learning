@@ -1,6 +1,6 @@
 "use client";
 
-import { type ChangeEvent, useState } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 import {
   createBackupFilename,
   createLearningBackup,
@@ -8,18 +8,38 @@ import {
   parseLearningBackup,
 } from "../lib/storage/learningBackup";
 import {
+  learningStoreChangedEvent,
   loadLearningStore,
   saveLearningStore,
   type LearningStore,
 } from "../lib/storage/learningStore";
 
 export function BackupRestore() {
+  const [currentStore, setCurrentStore] = useState<LearningStore | null>(null);
   const [previewStore, setPreviewStore] = useState<LearningStore | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  function handleExport() {
-    const result = createLearningBackup(loadLearningStore());
+  useEffect(() => {
+    let cancelled = false;
+    const refreshStore = () => {
+      void loadLearningStore().then((loadedStore) => {
+        if (!cancelled) {
+          setCurrentStore(loadedStore);
+        }
+      });
+    };
+
+    refreshStore();
+    window.addEventListener(learningStoreChangedEvent, refreshStore);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(learningStoreChangedEvent, refreshStore);
+    };
+  }, []);
+
+  async function handleExport() {
+    const result = createLearningBackup(await loadLearningStore());
 
     if (!result.ok) {
       setError("현재 학습 데이터를 검증하지 못해 백업할 수 없습니다.");
@@ -67,17 +87,17 @@ export function BackupRestore() {
     }
   }
 
-  function handleRestore(mode: "overwrite" | "merge") {
+  async function handleRestore(mode: "overwrite" | "merge") {
     if (previewStore === null) {
       return;
     }
 
-    const currentStore = loadLearningStore();
+    const stored = await loadLearningStore();
     const nextStore =
       mode === "merge"
-        ? mergeLearningStores(currentStore, previewStore)
+        ? mergeLearningStores(stored, previewStore)
         : previewStore;
-    const result = saveLearningStore(nextStore);
+    const result = await saveLearningStore(nextStore);
 
     if (!result.ok) {
       setError("복원한 학습 데이터를 브라우저에 저장하지 못했습니다.");
@@ -93,7 +113,9 @@ export function BackupRestore() {
     );
   }
 
-  const currentIds = new Set(loadLearningStore().videos.map((video) => video.youtubeId));
+  const currentIds = new Set(
+    currentStore?.videos.map((video) => video.youtubeId) ?? [],
+  );
   const duplicateCount = previewStore?.videos.filter((video) =>
     currentIds.has(video.youtubeId),
   ).length ?? 0;

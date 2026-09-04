@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { type FormEvent, useReducer, useRef, useState, useSyncExternalStore } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import {
+  learningStoreChangedEvent,
   loadLearningStore,
   saveLearningStore,
   createLearningId,
   updateCurrentVideo,
   type LearningNote,
   type LearningSegment,
+  type LearningStore,
   type LearningVideo,
 } from "../lib/storage/learningStore";
 import {
@@ -28,8 +30,7 @@ const statusLabels = {
 
 export function LearningVideoDetail() {
   const { id } = useParams<{ id: string }>();
-  const isClient = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
-  const [, refresh] = useReducer((value: number) => value + 1, 0);
+  const [store, setStore] = useState<LearningStore | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
   const [currentSeconds, setCurrentSeconds] = useState<number | null>(null);
@@ -38,14 +39,32 @@ export function LearningVideoDetail() {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const playerRef = useRef<YouTubeLearningPlayerHandle>(null);
-  const video: LearningVideo | null | undefined = isClient
-    ? loadLearningStore().videos.find((item) => item.youtubeId === id) ?? null
-    : undefined;
+  const video: LearningVideo | null | undefined = store === null
+    ? undefined
+    : store.videos.find((item) => item.youtubeId === id) ?? null;
 
-  function handleStatusChange(status: LearningVideo["status"]) {
-    const store = loadLearningStore();
-    const saveResult = saveLearningStore(
-      updateCurrentVideo(store, id, new Date().toISOString(), (item) => ({
+  useEffect(() => {
+    let cancelled = false;
+    const refreshStore = () => {
+      void loadLearningStore().then((loadedStore) => {
+        if (!cancelled) {
+          setStore(loadedStore);
+        }
+      });
+    };
+
+    refreshStore();
+    window.addEventListener(learningStoreChangedEvent, refreshStore);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(learningStoreChangedEvent, refreshStore);
+    };
+  }, []);
+
+  async function handleStatusChange(status: LearningVideo["status"]) {
+    const currentStore = await loadLearningStore();
+    const saveResult = await saveLearningStore(
+      updateCurrentVideo(currentStore, id, new Date().toISOString(), (item) => ({
         ...item,
         status,
       })),
@@ -57,13 +76,12 @@ export function LearningVideoDetail() {
     }
 
     setSaveError(null);
-    refresh();
   }
 
-  function saveVideoUpdate(update: (current: LearningVideo) => LearningVideo) {
-    const result = saveLearningStore(
+  async function saveVideoUpdate(update: (current: LearningVideo) => LearningVideo) {
+    const result = await saveLearningStore(
       updateCurrentVideo(
-        loadLearningStore(),
+        await loadLearningStore(),
         id,
         new Date().toISOString(),
         update,
@@ -76,11 +94,10 @@ export function LearningVideoDetail() {
     }
 
     setSaveError(null);
-    refresh();
     return true;
   }
 
-  function handleAddNote(event: FormEvent<HTMLFormElement>) {
+  async function handleAddNote(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = noteText.trim();
     if (!video || text.length === 0 || text.length > 2_000 || video.notes.length >= 500) {
@@ -98,7 +115,7 @@ export function LearningVideoDetail() {
       updatedAt: now,
     };
 
-    if (saveVideoUpdate((current) => ({
+    if (await saveVideoUpdate((current) => ({
       ...current,
       notes: [...current.notes, note],
     }))) {
@@ -106,15 +123,15 @@ export function LearningVideoDetail() {
     }
   }
 
-  function handlePlaybackModeChange(playbackMode: LearningVideo["playbackMode"]) {
-    if (saveVideoUpdate((current) => ({ ...current, playbackMode }))) {
+  async function handlePlaybackModeChange(playbackMode: LearningVideo["playbackMode"]) {
+    if (await saveVideoUpdate((current) => ({ ...current, playbackMode }))) {
       setCurrentSeconds(null);
       setManualTimeInput(null);
       setManualTimeError(null);
     }
   }
 
-  function handleManualTimeSave(event: FormEvent<HTMLFormElement>) {
+  async function handleManualTimeSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!video) return;
 
@@ -124,7 +141,7 @@ export function LearningVideoDetail() {
       return;
     }
 
-    if (saveVideoUpdate((current) => ({ ...current, playbackSeconds: seconds }))) {
+    if (await saveVideoUpdate((current) => ({ ...current, playbackSeconds: seconds }))) {
       setManualTimeInput(formatTimeInput(seconds));
       setManualTimeError(null);
     }
@@ -133,17 +150,17 @@ export function LearningVideoDetail() {
   function handleTimeUpdate(seconds: number, shouldPersist: boolean) {
     setCurrentSeconds(seconds);
     if (!shouldPersist || seconds === video?.playbackSeconds) return;
-    saveVideoUpdate((current) => ({ ...current, playbackSeconds: seconds }));
+    void saveVideoUpdate((current) => ({ ...current, playbackSeconds: seconds }));
   }
 
-  function handleSaveEdit(noteId: string) {
+  async function handleSaveEdit(noteId: string) {
     const text = editingText.trim();
     if (text.length === 0 || text.length > 2_000) {
       return;
     }
 
     const now = new Date().toISOString();
-    if (saveVideoUpdate((current) => ({
+    if (await saveVideoUpdate((current) => ({
       ...current,
       notes: current.notes.map((note) =>
         note.id === noteId ? { ...note, text, updatedAt: now } : note,
@@ -159,7 +176,7 @@ export function LearningVideoDetail() {
       return;
     }
 
-    saveVideoUpdate((current) => ({
+    void saveVideoUpdate((current) => ({
       ...current,
       notes: current.notes.filter((note) => note.id !== noteId),
     }));
@@ -400,16 +417,4 @@ export function formatTimestamp(totalSeconds: number) {
   return hours > 0
     ? `[${hours}:${String(minutes).padStart(2, "0")}:${remainder}]`
     : `[${minutes}:${remainder}]`;
-}
-
-function subscribe() {
-  return () => undefined;
-}
-
-function getClientSnapshot() {
-  return true;
-}
-
-function getServerSnapshot() {
-  return false;
 }

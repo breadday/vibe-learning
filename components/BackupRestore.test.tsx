@@ -4,9 +4,11 @@ import { BackupRestore } from "./BackupRestore";
 import { LearningLibrary } from "./LearningLibrary";
 import {
   learningStoreKey,
+  loadLearningStore,
   type LearningStore,
   type LearningVideo,
 } from "../lib/storage/learningStore";
+import { removeLearningRecord } from "../lib/storage/idb";
 
 function video(youtubeId: string, title: string, updatedAt: string): LearningVideo {
   return {
@@ -27,7 +29,8 @@ function store(videos: LearningVideo[]): LearningStore {
   return { schemaVersion: 1, videos, lastOpenedVideoId: null };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await removeLearningRecord();
   window.localStorage.clear();
 });
 
@@ -63,10 +66,8 @@ describe("BackupRestore", () => {
     expect(await screen.findByText("영상 2개 · 메모 0개 · 현재 목록과 중복 1개")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "병합" }));
 
-    await waitFor(() => {
-      const saved = JSON.parse(
-        window.localStorage.getItem(learningStoreKey) ?? "null",
-      ) as LearningStore;
+    await waitFor(async () => {
+      const saved = await loadLearningStore();
       expect(saved.videos).toHaveLength(2);
       expect(saved.videos.find((item) => item.youtubeId === "AAAAAAAAAAA")?.title)
         .toBe("백업 최신 제목");
@@ -89,8 +90,9 @@ describe("BackupRestore", () => {
     await screen.findByText("가져오기 미리보기");
     fireEvent.click(screen.getByRole("button", { name: "덮어쓰기" }));
 
-    expect(JSON.parse(window.localStorage.getItem(learningStoreKey) ?? "null"))
-      .toEqual(incoming);
+    await waitFor(async () => {
+      expect(await loadLearningStore()).toEqual(incoming);
+    });
   });
 
   it("refreshes the visible learning list after restoring", async () => {

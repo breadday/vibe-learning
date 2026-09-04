@@ -1,10 +1,12 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { formatTimestamp, LearningVideoDetail } from "./LearningVideoDetail";
 import {
   learningStoreKey,
+  loadLearningStore,
   type LearningStore,
 } from "../lib/storage/learningStore";
+import { removeLearningRecord } from "../lib/storage/idb";
 
 const videoId = "ABCDEFGHIJK";
 const seekTo = vi.hoisted(() => vi.fn());
@@ -33,7 +35,8 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ id: videoId }),
 }));
 
-beforeEach(() => {
+beforeEach(async () => {
+  await removeLearningRecord();
   seekTo.mockClear();
   playSegment.mockClear();
   getCurrentTime.mockReset();
@@ -60,17 +63,24 @@ beforeEach(() => {
   window.localStorage.setItem(learningStoreKey, JSON.stringify(store));
 });
 
+async function renderDetail() {
+  const result = render(<LearningVideoDetail />);
+  await screen.findByLabelText("학습 상태");
+  return result;
+}
+
 describe("LearningVideoDetail", () => {
-  it("persists a status change across remounts", () => {
-    const { unmount } = render(<LearningVideoDetail />);
+  it("persists a status change across remounts", async () => {
+    const { unmount } = await renderDetail();
 
     fireEvent.change(screen.getByLabelText("학습 상태"), {
       target: { value: "in-progress" },
     });
 
-    const stored = JSON.parse(
-      window.localStorage.getItem(learningStoreKey) ?? "null",
-    ) as LearningStore;
+    await waitFor(() => {
+      expect(screen.getByLabelText("학습 상태")).toHaveValue("in-progress");
+    });
+    const stored = await loadLearningStore();
     expect(stored.videos[0]).toMatchObject({
       youtubeId: videoId,
       status: "in-progress",
@@ -79,18 +89,19 @@ describe("LearningVideoDetail", () => {
     expect(stored.lastOpenedVideoId).toBe(videoId);
 
     unmount();
-    render(<LearningVideoDetail />);
+    await renderDetail();
     expect(screen.getByLabelText("학습 상태")).toHaveValue("in-progress");
   });
 
-  it("adds, edits, and deletes a trimmed personal note", () => {
+  it("adds, edits, and deletes a trimmed personal note", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<LearningVideoDetail />);
+    await renderDetail();
 
     fireEvent.change(screen.getByLabelText("메모 내용"), {
       target: { value: "  처음 메모  " },
     });
     fireEvent.click(screen.getByRole("button", { name: "메모 저장" }));
+    await screen.findByRole("button", { name: "[0:00] 위치로 이동" });
     expect(screen.getByText("처음 메모")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "수정" }));
@@ -98,41 +109,42 @@ describe("LearningVideoDetail", () => {
       target: { value: "수정한 메모" },
     });
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() => {
+      expect(screen.queryByLabelText("메모 수정 내용")).not.toBeInTheDocument();
+    });
     expect(screen.getByText("수정한 메모")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "삭제" }));
-    expect(screen.getByText("아직 작성한 개인 메모가 없습니다.")).toBeInTheDocument();
+    expect(await screen.findByText("아직 작성한 개인 메모가 없습니다.")).toBeInTheDocument();
   });
 
-  it("disables blank notes and exposes the 2,000 character limit", () => {
-    render(<LearningVideoDetail />);
+  it("disables blank notes and exposes the 2,000 character limit", async () => {
+    await renderDetail();
     expect(screen.getByRole("button", { name: "메모 저장" })).toBeDisabled();
     expect(screen.getByLabelText("메모 내용")).toHaveAttribute("maxlength", "2000");
   });
 
-  it("shows the saved playback position as a clickable note timestamp", () => {
+  it("shows the saved playback position as a clickable note timestamp", async () => {
     const store = JSON.parse(
       window.localStorage.getItem(learningStoreKey) ?? "null",
     ) as LearningStore;
     store.videos[0].playbackSeconds = 763;
     window.localStorage.setItem(learningStoreKey, JSON.stringify(store));
 
-    render(<LearningVideoDetail />);
+    await renderDetail();
     fireEvent.change(screen.getByLabelText("메모 내용"), {
       target: { value: "현재 위치 메모" },
     });
     fireEvent.click(screen.getByRole("button", { name: "메모 저장" }));
 
     expect(
-      screen.getByRole("button", { name: "[12:43] 위치로 이동" }),
+      await screen.findByRole("button", { name: "[12:43] 위치로 이동" }),
     ).toBeInTheDocument();
-    const stored = JSON.parse(
-      window.localStorage.getItem(learningStoreKey) ?? "null",
-    ) as LearningStore;
+    const stored = await loadLearningStore();
     expect(stored.videos[0].notes[0].timestampSeconds).toBe(763);
   });
 
-  it("seeks to the note timestamp when its accessible button is clicked", () => {
+  it("seeks to the note timestamp when its accessible button is clicked", async () => {
     const store = JSON.parse(
       window.localStorage.getItem(learningStoreKey) ?? "null",
     ) as LearningStore;
@@ -145,18 +157,19 @@ describe("LearningVideoDetail", () => {
     }];
     window.localStorage.setItem(learningStoreKey, JSON.stringify(store));
 
-    render(<LearningVideoDetail />);
+    await renderDetail();
     fireEvent.click(screen.getByRole("button", { name: "[3:05] 위치로 이동" }));
 
     expect(seekTo).toHaveBeenCalledWith(185);
   });
 
-  it("switches from the existing embedded player to the external workspace", () => {
-    render(<LearningVideoDetail />);
+  it("switches from the existing embedded player to the external workspace", async () => {
+    await renderDetail();
     expect(screen.getByLabelText("테스트 영상 플레이어")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "YouTube에서 학습하기" }));
 
+    await screen.findByLabelText("외부 재생 도구");
     expect(screen.queryByLabelText("테스트 영상 플레이어")).not.toBeInTheDocument();
     expect(screen.getByLabelText("외부 재생 도구")).toBeInTheDocument();
     expect(document.querySelector(".detail-player-column")).not.toBeInTheDocument();
@@ -180,26 +193,29 @@ describe("LearningVideoDetail", () => {
       .toHaveAttribute("rel", "noreferrer");
   });
 
-  it("saves an external position and uses it for a new note", () => {
+  it("saves an external position and uses it for a new note", async () => {
     const store = JSON.parse(
       window.localStorage.getItem(learningStoreKey) ?? "null",
     ) as LearningStore;
     store.videos[0].playbackMode = "external";
     window.localStorage.setItem(learningStoreKey, JSON.stringify(store));
 
-    render(<LearningVideoDetail />);
+    await renderDetail();
     fireEvent.change(screen.getByLabelText("마지막 학습 위치"), {
       target: { value: "12:43" },
     });
     fireEvent.click(screen.getByRole("button", { name: "위치 저장" }));
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "YouTube에서 보기" }))
+        .toHaveAttribute("href", `https://www.youtube.com/watch?v=${videoId}&t=763s`);
+    });
     fireEvent.change(screen.getByLabelText("메모 내용"), {
       target: { value: "외부 재생 메모" },
     });
     fireEvent.click(screen.getByRole("button", { name: "메모 저장" }));
+    await screen.findByRole("button", { name: "[12:43] 위치로 이동" });
 
-    const saved = JSON.parse(
-      window.localStorage.getItem(learningStoreKey) ?? "null",
-    ) as LearningStore;
+    const saved = await loadLearningStore();
     expect(saved.videos[0].playbackSeconds).toBe(763);
     expect(saved.videos[0].notes[0].timestampSeconds).toBe(763);
     expect(saved.videos[0].updatedAt).not.toBe("2026-08-01T00:00:00.000Z");
@@ -208,7 +224,7 @@ describe("LearningVideoDetail", () => {
       .toHaveAttribute("href", `https://www.youtube.com/watch?v=${videoId}&t=763s`);
   });
 
-  it("rejects an invalid external time and opens note timestamps on YouTube", () => {
+  it("rejects an invalid external time and opens note timestamps on YouTube", async () => {
     const store = JSON.parse(
       window.localStorage.getItem(learningStoreKey) ?? "null",
     ) as LearningStore;
@@ -223,15 +239,13 @@ describe("LearningVideoDetail", () => {
     window.localStorage.setItem(learningStoreKey, JSON.stringify(store));
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
 
-    render(<LearningVideoDetail />);
+    await renderDetail();
     fireEvent.change(screen.getByLabelText("마지막 학습 위치"), {
       target: { value: "-1:20" },
     });
     fireEvent.click(screen.getByRole("button", { name: "위치 저장" }));
     expect(screen.getByRole("alert")).toHaveTextContent("올바른 시간을 입력");
-    const saved = JSON.parse(
-      window.localStorage.getItem(learningStoreKey) ?? "null",
-    ) as LearningStore;
+    const saved = await loadLearningStore();
     expect(saved.videos[0].playbackSeconds).toBe(0);
 
     fireEvent.click(screen.getByRole("button", { name: "[18:20] 위치로 이동" }));
@@ -242,7 +256,7 @@ describe("LearningVideoDetail", () => {
     );
   });
 
-  it("returns to the embedded player without losing external learning data", () => {
+  it("returns to the embedded player without losing external learning data", async () => {
     const store = JSON.parse(
       window.localStorage.getItem(learningStoreKey) ?? "null",
     ) as LearningStore;
@@ -257,14 +271,12 @@ describe("LearningVideoDetail", () => {
     }];
     window.localStorage.setItem(learningStoreKey, JSON.stringify(store));
 
-    render(<LearningVideoDetail />);
+    await renderDetail();
     fireEvent.click(screen.getByRole("button", { name: "앱에서 재생 시도" }));
 
-    expect(screen.getByLabelText("테스트 영상 플레이어")).toBeInTheDocument();
+    expect(await screen.findByLabelText("테스트 영상 플레이어")).toBeInTheDocument();
     expect(screen.getByText("보존할 메모")).toBeInTheDocument();
-    const saved = JSON.parse(
-      window.localStorage.getItem(learningStoreKey) ?? "null",
-    ) as LearningStore;
+    const saved = await loadLearningStore();
     expect(saved.videos[0]).toMatchObject({
       playbackMode: "embedded",
       playbackSeconds: 245,
@@ -276,22 +288,22 @@ describe("LearningVideoDetail", () => {
     expect(formatTimestamp(3_723)).toBe("[1:02:03]");
   });
 
-  it("uses the external saved position and creates a segment timestamp link", () => {
+  it("uses the external saved position and creates a segment timestamp link", async () => {
     const store = JSON.parse(window.localStorage.getItem(learningStoreKey) ?? "null") as LearningStore;
     store.videos[0].playbackMode = "external";
     store.videos[0].playbackSeconds = 125;
     window.localStorage.setItem(learningStoreKey, JSON.stringify(store));
-    render(<LearningVideoDetail />);
+    await renderDetail();
     fireEvent.change(screen.getByLabelText("구간 제목"), { target: { value: "외부 구간" } });
     fireEvent.click(screen.getAllByRole("button", { name: "마지막 위치 적용" })[0]);
     fireEvent.change(screen.getByLabelText("구간 종료 시간"), { target: { value: "2:30" } });
     fireEvent.click(screen.getByRole("button", { name: "구간 추가" }));
-    expect(screen.getByRole("link", { name: "YouTube에서 시작" })).toHaveAttribute("href", `https://www.youtube.com/watch?v=${videoId}&t=125s`);
+    expect(await screen.findByRole("link", { name: "YouTube에서 시작" })).toHaveAttribute("href", `https://www.youtube.com/watch?v=${videoId}&t=125s`);
   });
 
-  it("adds, validates, edits, plays, and deletes a learning segment", () => {
+  it("adds, validates, edits, plays, and deletes a learning segment", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<LearningVideoDetail />);
+    await renderDetail();
     fireEvent.change(screen.getByLabelText("구간 제목"), { target: { value: "핵심 구간" } });
     fireEvent.change(screen.getByLabelText("구간 시작 시간"), { target: { value: "00:20" } });
     fireEvent.change(screen.getByLabelText("구간 종료 시간"), { target: { value: "00:10" } });
@@ -300,20 +312,20 @@ describe("LearningVideoDetail", () => {
 
     fireEvent.change(screen.getByLabelText("구간 종료 시간"), { target: { value: "00:40" } });
     fireEvent.click(screen.getByRole("button", { name: "구간 추가" }));
-    expect(screen.getByText("00:20–00:40")).toBeInTheDocument();
+    expect(await screen.findByText("00:20–00:40")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "구간 재생" }));
     expect(playSegment).toHaveBeenCalledWith(20, 40);
     fireEvent.click(screen.getByRole("button", { name: "수정" }));
     fireEvent.change(screen.getByLabelText("구간 제목"), { target: { value: "수정 구간" } });
     fireEvent.click(screen.getByRole("button", { name: "구간 수정 저장" }));
-    expect(screen.getByText("수정 구간")).toBeInTheDocument();
+    expect(await screen.findByText("수정 구간")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "삭제" }));
-    expect(screen.getByText("아직 저장한 학습 구간이 없습니다.")).toBeInTheDocument();
+    expect(await screen.findByText("아직 저장한 학습 구간이 없습니다.")).toBeInTheDocument();
   });
 
-  it("applies the player's current time when each segment time button is clicked", () => {
+  it("applies the player's current time when each segment time button is clicked", async () => {
     getCurrentTime.mockReturnValueOnce(83).mockReturnValueOnce(147);
-    render(<LearningVideoDetail />);
+    await renderDetail();
 
     const applyButtons = screen.getAllByRole("button", { name: "현재 위치 적용" });
     fireEvent.click(applyButtons[0]);

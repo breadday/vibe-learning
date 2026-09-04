@@ -1,4 +1,10 @@
 import { expect, test } from "@playwright/test";
+import {
+  idbDatabaseName,
+  idbStoreName,
+  learningRecordKey,
+} from "../lib/storage/idb";
+import type { LearningStore } from "../lib/storage/learningStore";
 
 const videoId = "EXTERNAL123";
 
@@ -59,9 +65,30 @@ test("learns with a manually saved position in external playback mode", async ({
   await expect(page.getByRole("link", { name: "YouTube에서 보기" }))
     .toHaveAttribute("href", `https://www.youtube.com/watch?v=${videoId}&t=763s`);
 
-  const stored = await page.evaluate(() => JSON.parse(
-    window.localStorage.getItem("vibe-learning:v1") ?? "null",
-  ));
+  const stored = await page.evaluate(
+    ({ databaseName, storeName, recordKey }) =>
+      new Promise<LearningStore>((resolve, reject) => {
+        const openRequest = indexedDB.open(databaseName);
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const database = openRequest.result;
+          const readRequest = database
+            .transaction(storeName, "readonly")
+            .objectStore(storeName)
+            .get(recordKey);
+          readRequest.onerror = () => reject(readRequest.error);
+          readRequest.onsuccess = () => {
+            database.close();
+            resolve(JSON.parse(readRequest.result) as LearningStore);
+          };
+        };
+      }),
+    {
+      databaseName: idbDatabaseName,
+      storeName: idbStoreName,
+      recordKey: learningRecordKey,
+    },
+  );
   expect(stored.videos[0]).toMatchObject({
     playbackMode: "external",
     playbackSeconds: 763,

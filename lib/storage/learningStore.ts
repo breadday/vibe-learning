@@ -1,9 +1,12 @@
 import { z } from "zod";
+import {
+  readLearningRecord,
+  writeLearningRecord,
+} from "./idb";
 
 export const learningStoreKey = "vibe-learning:v1";
 export const learningStoreChangedEvent = "vibe-learning:store-changed";
 export const learningStoreWarningEvent = "vibe-learning:store-warning";
-export const learningStorageQuotaBytes = 5 * 1024 * 1024;
 export const learningStorageWarningRatio = 0.8;
 
 const learningNoteSchema = z
@@ -166,27 +169,83 @@ export function parseLearningStoreData(value: unknown): LearningStore | null {
   return result.success ? result.data : null;
 }
 
-export function loadLearningStore(): LearningStore {
-  if (typeof window === "undefined") {
-    return createEmptyLearningStore();
-  }
+let operationChain: Promise<unknown> = Promise.resolve();
 
+function enqueue<T>(operation: () => Promise<T>): Promise<T> {
+  const result = operationChain.then(operation, operation);
+  operationChain = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+}
+
+function parseStoredValue(storedValue: string): LearningStore | null {
   try {
-    const storedValue = window.localStorage.getItem(learningStoreKey);
-
-    if (storedValue === null) {
-      return createEmptyLearningStore();
-    }
-
-    return parseLearningStoreData(JSON.parse(storedValue)) ?? createEmptyLearningStore();
+    return parseLearningStoreData(JSON.parse(storedValue));
   } catch {
-    return createEmptyLearningStore();
+    return null;
   }
 }
 
-export function saveLearningStore(
+async function loadStoredRecord(): Promise<LearningStore> {
+  const storedValue = await readLearningRecord();
+
+  if (storedValue !== null) {
+    return parseStoredValue(storedValue) ?? createEmptyLearningStore();
+  }
+
+  return migrateLegacyStore();
+}
+
+async function migrateLegacyStore(): Promise<LearningStore> {
+  let legacyValue: string | null;
+  try {
+    legacyValue = window.localStorage.getItem(learningStoreKey);
+  } catch {
+    return createEmptyLearningStore();
+  }
+
+  if (legacyValue === null) {
+    return createEmptyLearningStore();
+  }
+
+  const migrated = parseStoredValue(legacyValue);
+
+  if (migrated !== null) {
+    try {
+      await writeLearningRecord(JSON.stringify(migrated));
+    } catch {
+      return migrated;
+    }
+  }
+
+  try {
+    window.localStorage.removeItem(learningStoreKey);
+  } catch {
+    // 삭제에 실패해도 마이그레이션 결과는 유지합니다.
+  }
+
+  return migrated ?? createEmptyLearningStore();
+}
+
+export function loadLearningStore(): Promise<LearningStore> {
+  if (typeof window === "undefined") {
+    return Promise.resolve(createEmptyLearningStore());
+  }
+
+  return enqueue(async () => {
+    try {
+      return await loadStoredRecord();
+    } catch {
+      return createEmptyLearningStore();
+    }
+  });
+}
+
+export async function saveLearningStore(
   store: LearningStore,
-): SaveLearningStoreResult {
+): Promise<SaveLearningStoreResult> {
   const validatedStore = parseLearningStoreData(store);
 
   if (validatedStore === null) {
@@ -197,54 +256,57 @@ export function saveLearningStore(
     return { ok: false, reason: "storage-unavailable" };
   }
 
-  try {
-    window.localStorage.setItem(
-      learningStoreKey,
-      JSON.stringify(validatedStore),
-    );
-    window.dispatchEvent(new Event(learningStoreChangedEvent));
-    checkLearningStorageUsage();
-    return { ok: true };
-  } catch (error) {
-    if (isQuotaExceededError(error)) {
-      return { ok: false, reason: "quota-exceeded" };
-    }
+  return enqueue(async () => {
+    try {
+      await writeLearningRecord(JSON.stringify(validatedStore));
+      window.dispatchEvent(new Event(learningStoreChangedEvent));
+      await checkLearningStorageUsage();
+      return { ok: true };
+    } catch (error) {
+      if (isQuotaExceededError(error)) {
+        return { ok: false, reason: "quota-exceeded" };
+      }
 
-    return { ok: false, reason: "storage-unavailable" };
-  }
+      return { ok: false, reason: "storage-unavailable" };
+    }
+  });
 }
 
-export function measureLearningStorageUsage(): LearningStorageUsage | null {
+export async function measureLearningStorageUsage(): Promise<LearningStorageUsage | null> {
   if (typeof window === "undefined") {
     return null;
   }
 
-  let storedValue: string | null;
   try {
-    storedValue = window.localStorage.getItem(learningStoreKey);
+    const estimate = await navigator.storage?.estimate();
+
+    if (!estimate || typeof estimate.quota !== "number" || estimate.quota <= 0) {
+      return null;
+    }
+
+    const bytes = estimate.usage ?? 0;
+    const usedRatio = bytes / estimate.quota;
+
+    return {
+      bytes,
+      quotaBytes: estimate.quota,
+      usedRatio,
+      overThreshold: usedRatio >= learningStorageWarningRatio,
+    };
   } catch {
     return null;
   }
-
-  const bytes = storedValue === null ? 0 : new Blob([storedValue]).size;
-  const usedRatio = bytes / learningStorageQuotaBytes;
-  return {
-    bytes,
-    quotaBytes: learningStorageQuotaBytes,
-    usedRatio,
-    overThreshold: usedRatio >= learningStorageWarningRatio,
-  };
 }
 
-export function checkLearningStorageUsage(): LearningStorageUsage | null {
-  const usage = measureLearningStorageUsage();
+export async function checkLearningStorageUsage(): Promise<LearningStorageUsage | null> {
+  const usage = await measureLearningStorageUsage();
 
   if (usage === null || !usage.overThreshold) {
     return usage;
   }
 
   console.warn(
-    `localStorage 사용량이 임계치를 넘었습니다: ${usage.bytes} / ${usage.quotaBytes} bytes`,
+    `브라우저 저장소 사용량이 임계치를 넘었습니다: ${usage.bytes} / ${usage.quotaBytes} bytes`,
   );
   window.dispatchEvent(
     new CustomEvent<LearningStorageUsage>(learningStoreWarningEvent, {

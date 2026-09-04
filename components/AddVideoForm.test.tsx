@@ -1,8 +1,11 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AddVideoForm } from "./AddVideoForm";
+import * as idb from "../lib/storage/idb";
+import { removeLearningRecord } from "../lib/storage/idb";
 import {
   learningStoreKey,
+  loadLearningStore,
   type LearningStore,
 } from "../lib/storage/learningStore";
 
@@ -13,7 +16,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
 }));
 
-beforeEach(() => {
+beforeEach(async () => {
+  await removeLearningRecord();
   push.mockReset();
   window.localStorage.clear();
   vi.useFakeTimers();
@@ -196,8 +200,11 @@ describe("AddVideoForm", () => {
     fireEvent.change(screen.getByLabelText("학습 제목"), {
       target: { value: "수동 제목" },
     });
+    vi.useRealTimers();
     fireEvent.click(screen.getByRole("button", { name: "학습에 추가" }));
-    expect(push).toHaveBeenCalledWith(`/videos/${videoId}`);
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith(`/videos/${videoId}`);
+    });
   });
 
   it("aborts the lookup when the component unmounts", async () => {
@@ -215,25 +222,23 @@ describe("AddVideoForm", () => {
   });
 
   it("keeps save errors separate from title lookup status", async () => {
-    const setItem = vi
-      .spyOn(Storage.prototype, "setItem")
-      .mockImplementation(() => {
-        throw new DOMException("blocked", "SecurityError");
-      });
+    vi.spyOn(idb, "writeLearningRecord").mockRejectedValueOnce(
+      new DOMException("blocked", "SecurityError"),
+    );
     render(<AddVideoForm />);
     await startTitleLookup();
     await act(async () => {});
+    vi.useRealTimers();
     fireEvent.click(screen.getByRole("button", { name: "학습에 추가" }));
 
     expect(screen.getByText("영상 제목을 자동으로 입력했습니다. 필요하면 수정할 수 있습니다."))
       .toBeInTheDocument();
     expect(
-      screen.getByText("브라우저에 저장할 수 없습니다. 저장소 사용 설정을 확인해 주세요."),
+      await screen.findByText("브라우저에 저장할 수 없습니다. 저장소 사용 설정을 확인해 주세요."),
     ).toBeInTheDocument();
-    setItem.mockRestore();
   });
 
-  it("stores a new video and navigates to its detail page", () => {
+  it("stores a new video and navigates to its detail page", async () => {
     render(<AddVideoForm />);
 
     fireEvent.change(screen.getByLabelText("YouTube 주소를 붙여 넣으세요"), {
@@ -242,11 +247,13 @@ describe("AddVideoForm", () => {
     fireEvent.change(screen.getByLabelText("학습 제목"), {
       target: { value: "  나의 학습 영상  " },
     });
+    vi.useRealTimers();
     fireEvent.click(screen.getByRole("button", { name: "학습에 추가" }));
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith(`/videos/${videoId}`);
+    });
 
-    const stored = JSON.parse(
-      window.localStorage.getItem(learningStoreKey) ?? "null",
-    ) as LearningStore;
+    const stored = await loadLearningStore();
     expect(stored).toMatchObject({
       schemaVersion: 1,
       lastOpenedVideoId: videoId,
@@ -262,7 +269,7 @@ describe("AddVideoForm", () => {
     expect(push).toHaveBeenCalledWith(`/videos/${videoId}`);
   });
 
-  it("offers navigation to an existing video instead of duplicating it", () => {
+  it("offers navigation to an existing video instead of duplicating it", async () => {
     const timestamp = "2026-08-29T10:00:00.000Z";
     const store: LearningStore = {
       schemaVersion: 1,
@@ -291,10 +298,11 @@ describe("AddVideoForm", () => {
     fireEvent.change(screen.getByLabelText("학습 제목"), {
       target: { value: "중복 영상" },
     });
+    vi.useRealTimers();
     fireEvent.click(screen.getByRole("button", { name: "학습에 추가" }));
 
-    expect(screen.getByText("이미 학습 목록에 등록된 영상입니다.")).toBeInTheDocument();
-    expect(JSON.parse(window.localStorage.getItem(learningStoreKey) ?? "null")).toEqual(store);
+    expect(await screen.findByText("이미 학습 목록에 등록된 영상입니다.")).toBeInTheDocument();
+    expect(await loadLearningStore()).toEqual(store);
 
     fireEvent.click(screen.getByRole("button", { name: "기존 영상으로 이동" }));
     expect(push).toHaveBeenCalledWith(`/videos/${videoId}`);

@@ -4,7 +4,7 @@ import { type FormEvent, useState } from "react";
 import { createLearningId, type LearningSegment } from "../lib/storage/learningStore";
 import { createYouTubeWatchUrl, formatTimeInput, parseTimeInput } from "../lib/youtube/youtubePlayback";
 
-type Props = { segments: LearningSegment[]; youtubeId: string; mode: "embedded" | "external"; getCurrentSeconds: () => number | null; onSave: (segments: LearningSegment[]) => boolean; onPlay: (segment: LearningSegment) => void };
+type Props = { segments: LearningSegment[]; youtubeId: string; mode: "embedded" | "external"; getCurrentSeconds: () => number | null; onSave: (segments: LearningSegment[]) => boolean | Promise<boolean>; onPlay: (segment: LearningSegment) => void };
 type Draft = { title: string; start: string; end: string };
 const emptyDraft: Draft = { title: "", start: "", end: "" };
 
@@ -25,7 +25,7 @@ export function LearningSegments({ segments, youtubeId, mode, getCurrentSeconds,
     setError(null);
   };
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
     const title = draft.title.trim();
     const startSeconds = parseTimeInput(draft.start);
@@ -36,7 +36,7 @@ export function LearningSegments({ segments, youtubeId, mode, getCurrentSeconds,
     if (endSeconds <= startSeconds) return setError("종료 시간은 시작 시간보다 커야 합니다.");
     const now = new Date().toISOString();
     const next = editingId ? segments.map((segment) => segment.id === editingId ? { ...segment, title, startSeconds, endSeconds, updatedAt: now } : segment) : [...segments, { id: createLearningId(), title, startSeconds, endSeconds, createdAt: now, updatedAt: now }];
-    if (onSave([...next].sort((a, b) => a.startSeconds - b.startSeconds))) { setDraft(emptyDraft); setEditingId(null); setError(null); }
+    if (await onSave([...next].sort((a, b) => a.startSeconds - b.startSeconds))) { setDraft(emptyDraft); setEditingId(null); setError(null); }
   }
 
   return <section className="learning-segments" aria-labelledby="learning-segments-heading">

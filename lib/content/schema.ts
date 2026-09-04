@@ -25,6 +25,16 @@ const videoSchema = z.object({
   summarySectionTitle: nonEmptyText.nullable().optional(),
   segmentsSectionTitle: nonEmptyText.nullable().optional(),
   practiceSectionTitle: nonEmptyText.nullable().optional(),
+  segmentsTitle: nonEmptyText.nullable().optional(),
+  practiceTitle: nonEmptyText.nullable().optional(),
+  keyPoints: z.array(nonEmptyText).nullable().optional(),
+  contextLabel: nonEmptyText.nullable().optional(),
+  navItems: z
+    .array(z.object({ label: nonEmptyText, href: nonEmptyText }).strict())
+    .nullable()
+    .optional(),
+  heroPrimaryCta: nonEmptyText.nullable().optional(),
+  heroSecondaryCta: nonEmptyText.nullable().optional(),
 }).strict();
 
 export const videoContentSchema = z.object({

@@ -48,6 +48,16 @@ describe("videoContentSchema", () => {
         summarySectionTitle: "이해하기",
         segmentsSectionTitle: "골라 보기",
         practiceSectionTitle: "직접 해보기",
+        segmentsTitle: "필요한 구간만 바로 보기",
+        practiceTitle: "안전한 환경을 직접 설계하기",
+        keyPoints: ["핵심 문장 하나", "핵심 문장 둘"],
+        contextLabel: "오늘의 바이브코딩 학습",
+        navItems: [
+          { label: "핵심", href: "#summary" },
+          { label: "구간", href: "#segments" },
+        ],
+        heroPrimaryCta: "필수 구간부터 보기",
+        heroSecondaryCta: "3줄 핵심 먼저 읽기",
       },
     };
     expect(videoContentSchema.safeParse(withFields).success).toBe(true);
@@ -57,6 +67,24 @@ describe("videoContentSchema", () => {
       video: { ...validContent().video, subtitle: "   " },
     };
     expect(videoContentSchema.safeParse(blankSubtitle).success).toBe(false);
+
+    const blankNavLabel = {
+      ...validContent(),
+      video: {
+        ...validContent().video,
+        navItems: [{ label: "   ", href: "#summary" }],
+      },
+    };
+    expect(videoContentSchema.safeParse(blankNavLabel).success).toBe(false);
+
+    const navItemWithoutHref = {
+      ...validContent(),
+      video: {
+        ...validContent().video,
+        navItems: [{ label: "핵심" }],
+      },
+    };
+    expect(videoContentSchema.safeParse(navItemWithoutHref).success).toBe(false);
   });
 
   it("rejects reversed and overlapping segments", () => {

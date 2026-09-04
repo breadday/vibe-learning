@@ -15,7 +15,22 @@
     "summaryTitle": "이 영상의 핵심 3줄",
     "summarySectionTitle": "이해하기",
     "segmentsSectionTitle": "골라 보기",
-    "practiceSectionTitle": "직접 해보기"
+    "practiceSectionTitle": "직접 해보기",
+    "segmentsTitle": "필요한 구간만 바로 보기",
+    "practiceTitle": "안전한 환경을 직접 설계하기",
+    "keyPoints": [
+      "코딩 에이전트는 답변을 넘어 파일을 읽고 수정하며 테스트까지 실행합니다.",
+      "MCP는 외부 도구를 연결하지만, 실제 능력과 위험은 허용한 권한에 따라 달라집니다.",
+      "좋은 개발은 작성으로 끝나지 않고 실행 → 확인 → 수정 → 재검증을 반복합니다."
+    ],
+    "contextLabel": "오늘의 바이브코딩 학습",
+    "navItems": [
+      { "label": "핵심", "href": "#summary" },
+      { "label": "구간", "href": "#segments" },
+      { "label": "실습", "href": "#practice" }
+    ],
+    "heroPrimaryCta": "필수 구간부터 보기",
+    "heroSecondaryCta": "3줄 핵심 먼저 읽기"
   },
   "freshness": {
     "status": "review-needed",

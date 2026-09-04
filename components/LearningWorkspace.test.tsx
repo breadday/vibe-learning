@@ -35,13 +35,22 @@ function reviewedContent(videoOverrides: Partial<VideoContent["video"]> = {}): V
 describe("LearningWorkspace", () => {
   it("falls back to derived copy when optional fields are absent", () => {
     render(<LearningWorkspace content={reviewedContent()} />);
-    expect(screen.getByText("10분 안에 테스트 영상을 이해합니다.")).toBeInTheDocument();
+    expect(screen.getByText("10분 안에 테스트 영상 이해하기")).toBeInTheDocument();
+    expect(screen.getByText("오늘의 바이브코딩 학습")).toBeInTheDocument();
     expect(screen.getAllByText("이해하기")).toHaveLength(2);
     expect(screen.getAllByText("핵심 3줄")).toHaveLength(2);
     expect(screen.getAllByText("골라 보기")).toHaveLength(2);
     expect(screen.getAllByText("직접 해보기")).toHaveLength(2);
     expect(screen.getByText("필수 구간 1개")).toBeInTheDocument();
     expect(screen.getByText("실습 1단계")).toBeInTheDocument();
+    expect(screen.getByText("필요한 구간만 바로 보기")).toBeInTheDocument();
+    expect(screen.getByText("안전한 환경을 직접 설계하기")).toBeInTheDocument();
+    expect(
+      screen.getByText("코딩 에이전트는 답변을 넘어 파일을 읽고 수정하며 테스트까지 실행합니다."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("필수 구간부터 보기")).toBeInTheDocument();
+    expect(screen.getByText("3줄 핵심 먼저 읽기")).toBeInTheDocument();
+    expect(screen.getAllByText("핵심")).toHaveLength(1);
   });
 
   it("renders presentation fields from the content data", () => {
@@ -53,14 +62,35 @@ describe("LearningWorkspace", () => {
           summarySectionTitle: "요약",
           segmentsSectionTitle: "구간",
           practiceSectionTitle: "실습",
+          segmentsTitle: "보고 싶은 구간만",
+          practiceTitle: "직접 해보는 실습",
+          keyPoints: ["핵심 문장 하나"],
+          contextLabel: "오늘의 추천 학습",
+          navItems: [
+            { label: "목차", href: "#summary" },
+            { label: "연습", href: "#practice" },
+          ],
+          heroPrimaryCta: "학습 시작",
+          heroSecondaryCta: "요약 읽기",
         })}
       />,
     );
     expect(screen.getByText("인트로 설명 문장")).toBeInTheDocument();
+    expect(screen.getByText("오늘의 추천 학습")).toBeInTheDocument();
     expect(screen.getByText("이 영상의 핵심")).toBeInTheDocument();
     expect(screen.getAllByText("요약")).toHaveLength(2);
-    expect(screen.getAllByText("구간")).toHaveLength(3);
-    expect(screen.getAllByText("실습")).toHaveLength(3);
+    expect(screen.getAllByText("구간")).toHaveLength(2);
+    expect(screen.getAllByText("실습")).toHaveLength(2);
+    expect(screen.getByText("보고 싶은 구간만")).toBeInTheDocument();
+    expect(screen.getByText("직접 해보는 실습")).toBeInTheDocument();
+    expect(screen.getByText("핵심 문장 하나")).toBeInTheDocument();
+    expect(
+      screen.queryByText("코딩 에이전트는 답변을 넘어 파일을 읽고 수정하며 테스트까지 실행합니다."),
+    ).toBeNull();
+    expect(screen.getByText("목차")).toBeInTheDocument();
+    expect(screen.getByText("연습")).toBeInTheDocument();
+    expect(screen.getByText("학습 시작")).toBeInTheDocument();
+    expect(screen.getByText("요약 읽기")).toBeInTheDocument();
     expect(screen.getByText("필수 구간 1개")).toBeInTheDocument();
   });
 });

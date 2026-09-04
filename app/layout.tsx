@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import { WebVitals } from "@/components/WebVitals";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -9,7 +11,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko" data-scroll-behavior="smooth">
-      <body>{children}</body>
+      <body>
+        {children}
+        <WebVitals />
+        <Analytics />
+      </body>
     </html>
   );
 }

@@ -1,4 +1,5 @@
 import { createStore, del, get, set, type UseStore } from "idb-keyval";
+import { publishLearningStoreUpdated } from "./sync";
 
 export const idbDatabaseName = "vibe-learning";
 export const idbStoreName = "learning";
@@ -20,6 +21,7 @@ export async function readLearningRecord(): Promise<string | null> {
 
 export async function writeLearningRecord(value: string): Promise<void> {
   await set(learningRecordKey, value, resolveRecordStore());
+  publishLearningStoreUpdated();
 }
 
 export async function removeLearningRecord(): Promise<void> {

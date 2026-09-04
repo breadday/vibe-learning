@@ -14,6 +14,7 @@ import {
   type LearningStore,
   type LearningVideo,
 } from "../lib/storage/learningStore";
+import { subscribeToLearningStoreUpdates } from "../lib/storage/sync";
 import {
   createYouTubeWatchUrl,
   formatTimeInput,
@@ -55,9 +56,11 @@ export function LearningVideoDetail() {
 
     refreshStore();
     window.addEventListener(learningStoreChangedEvent, refreshStore);
+    const unsubscribe = subscribeToLearningStoreUpdates(refreshStore);
     return () => {
       cancelled = true;
       window.removeEventListener(learningStoreChangedEvent, refreshStore);
+      unsubscribe();
     };
   }, []);
 

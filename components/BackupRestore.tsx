@@ -13,6 +13,7 @@ import {
   saveLearningStore,
   type LearningStore,
 } from "../lib/storage/learningStore";
+import { subscribeToLearningStoreUpdates } from "../lib/storage/sync";
 
 export function BackupRestore() {
   const [currentStore, setCurrentStore] = useState<LearningStore | null>(null);
@@ -32,9 +33,11 @@ export function BackupRestore() {
 
     refreshStore();
     window.addEventListener(learningStoreChangedEvent, refreshStore);
+    const unsubscribe = subscribeToLearningStoreUpdates(refreshStore);
     return () => {
       cancelled = true;
       window.removeEventListener(learningStoreChangedEvent, refreshStore);
+      unsubscribe();
     };
   }, []);
 

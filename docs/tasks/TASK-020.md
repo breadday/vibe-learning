@@ -5,7 +5,7 @@ Vercel 배포 + Web Vitals 모니터링
 
 ## 할 일
 1. 배포 준비
-   - next.config.js output 제거
+   - next.config.mjs output 제거
    - engines node >=20
    - build -- --webpack 최종 확인
 
@@ -24,10 +24,10 @@ Vercel 배포 + Web Vitals 모니터링
    - 배포 URL 2탭 열고 A탭 저장 -> B탭 100ms 이내 갱신 수동 테스트
 
 ## 완료 조건
-- [ ] Vercel URL 접근 가능
+- [x] Vercel URL 접근 가능
 - [ ] Lighthouse 90+ (기존 99점 유지)
 - [ ] 2탭 동기화 검증
-- [ ] vitals.ts 생성
+- [x] vitals.ts 생성 및 `app/layout.tsx` 연결
 
 ## 검증
 lint, typecheck, test 142개, build, e2e 15개

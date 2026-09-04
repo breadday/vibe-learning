@@ -12,6 +12,7 @@ YouTube 영상을 개인 학습 목록으로 관리하는 로컬 우선 웹 애�
 
 - [[04_설치및실행]]
 - [[05_배포및운영]]
+- 현재 배포: https://vibe-learning-blush.vercel.app/
 
 ## 데이터
 
@@ -29,6 +30,6 @@ YouTube 영상을 개인 학습 목록으로 관리하는 로컬 우선 웹 애�
 ## 참고 문서
 
 - [[11_codex_cli_development_guide|초기 개발 실행 가이드]]
+- [[14_ai_vibe_coding_workflow|AI와 함께 만든 바이브코딩 개발 흐름]]
 - [[12_content_json_schema|콘텐츠 JSON Schema v1]]
 - [[13_youtube_url_learning_design|YouTube URL 학습 기능 설계]]
-

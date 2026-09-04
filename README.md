@@ -2,7 +2,7 @@
 
 YouTube 영상을 보고 끝내지 않고 개인 학습 자료로 남기기 위한 로컬 우선 웹 앱입니다.
 
-로그인과 데이터베이스 없이 한 브라우저에서 사용합니다. YouTube 주소(일반 영상, 단축 URL, Shorts, embed 포함)를 입력하면 공식 YouTube Data API에서 제목을 가져오고, 조회 실패 시 직접 입력할 수 있습니다. 영상, 학습 상태, 메모는 브라우저 `localStorage`에만 저장되며 서버로 전송되지 않습니다. 자세한 설계와 개발 가이드는 `docs/`를 참고하세요.
+로그인과 데이터베이스 없이 사용하는 로컬 우선 앱입니다. YouTube 주소(일반 영상, 단축 URL, Shorts, embed 포함)를 입력하면 공식 YouTube Data API에서 제목을 가져오고, 조회 실패 시 직접 입력할 수 있습니다. 영상, 학습 상태, 메모는 브라우저 IndexedDB에 저장되며 서버로 전송되지 않습니다. 자세한 설계와 개발 가이드는 `docs/`를 참고하세요.
 
 ## 기술 스택
 
@@ -12,7 +12,7 @@ YouTube 영상을 보고 끝내지 않고 개인 학습 자료로 남기기 위�
 | UI | React 19, Tailwind CSS 4 |
 | 언어 | TypeScript 5 |
 | 검증 | Zod 4 |
-| 저장 | 브라우저 `localStorage` |
+| 저장 | 브라우저 IndexedDB (`vibe-learning`) |
 | 테스트 | Vitest, Testing Library, Playwright |
 | 콘텐츠 | MDX, JSON |
 

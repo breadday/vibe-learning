@@ -20,13 +20,14 @@
 | E2E | `npm run test:e2e` | 15개 통과 |
 | diff 형식 | `git diff --check` | 통과 |
 
-## 3. 수동 확인 필요
+## 3. 배포 확인
 
-- Vercel 프로젝트 생성 및 실제 URL 접근 확인
-- 배포 URL에서 `/`, `/learn/first-video`, `/learn/second-video` 응답 확인
-- Lighthouse 90+ 확인
-- 실제 배포 환경의 Vercel Analytics 데이터 수집 확인
-- 배포 URL의 두 탭에서 저장 후 100ms 이내 동기화 확인
+- [x] Vercel 배포 URL 접근: https://vibe-learning-blush.vercel.app/
+- [x] 배포 URL의 `/`, `/learn/first-video`, `/learn/second-video` 콘텐츠 응답 확인
+- [x] first-video 3단계와 second-video 4단계가 다르게 렌더링되는지 확인
+- [ ] Lighthouse 90+ 확인
+- [ ] 실제 배포 환경의 Vercel Analytics 데이터 수집 확인
+- [ ] 배포 URL의 두 탭에서 저장 후 100ms 이내 동기화 확인
 
 ## 4. 커밋
 

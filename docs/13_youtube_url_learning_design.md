@@ -147,7 +147,7 @@ MVP에서는 URL 등록과 동시에 자막 또는 요약을 생성하지 않는
 - 11자리가 아닌 영상 ID
 - 공백 입력
 - 동일 영상 중복
-- 손상된 localStorage 데이터
+- 손상된 IndexedDB 데이터와 기존 localStorage 마이그레이션
 
 ### 화면 테스트
 

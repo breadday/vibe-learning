@@ -1,6 +1,7 @@
 node_modules/
 .next/
 .next-e2e/
+docs/.obsidian/
 next-env.d.ts
 coverage/
 playwright-report/

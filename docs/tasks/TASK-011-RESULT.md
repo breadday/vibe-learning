@@ -175,6 +175,52 @@ export default defineConfig({
 
 ## 10. 커밋·배포 확인
 
-TASK-011의 최초 변경은 커밋 `a39e581`(`chore: E2E 테스트 포트 분리 및 next-env.d.ts 추적 제외 설정`)로 커밋됐고, 현재 로컬 `main`과 `origin/main`이 해당 커밋을 가리키므로 push도 완료됐다. 이 결과서의 기존 "커밋을 수행하지 않았다" 기록은 실제 저장소 상태와 달라 정정했다.
+TASK-011의 최초 변경은 커밋 `a39e581`(`chore: E2E 테스트 포트 분리 및 next-env.d.ts 추적 제외 설정`)로 커밋됐다. 이 결과서의 기존 "커밋을 수행하지 않았다" 기록은 실제 저장소 상태와 달라 정정했으며, 후속 검토 반영은 커밋 `0f357c4`(`build: typecheck 시 next typegen 자동 실행 설정`)에 포함돼 커밋 및 push까지 완료됐다. 현재 로컬 `main`과 `origin/main`은 모두 `0f357c4`를 가리킨다.
 
-후속 검토에서 추가한 새 클론 타입 생성 경로, Obsidian 상태 제거와 본 기록 정정은 아직 커밋하거나 push하지 않았다. 저장소에는 `Verify` CI 워크플로만 있고 배포 워크플로는 없다. 외부 배포 플랫폼 상태는 현재 환경에 `gh` CLI가 없어 별도로 조회하지 못했으므로 배포 여부를 단정하지 않는다.
+후속 검토에서 추가한 새 클론 타입 생성 경로, Obsidian 상태 제거와 본 기록 정정은 모두 커밋 `0f357c4`에 포함돼 있다. 저장소에는 `Verify` CI 워크플로만 있고 배포 워크플로는 없다. 외부 배포 플랫폼 상태는 현재 환경에 `gh` CLI가 없어 별도로 조회하지 못했으므로 배포 여부를 단정하지 않는다.
+
+## 부록: `playwright.config.ts` 설정 변경 상세
+
+섹션 7의 `playwright.config.ts` 행에 대응하는 변경 전/후 diff다. 포트 3100에서 E2E 전용 포트 3300으로 분리하고 `reuseExistingServer: false`로 통일한 내용을 보여준다.
+
+```diff
+ import { defineConfig, devices } from "@playwright/test";
+
++const e2ePort = 3300;
++const baseURL = `http://localhost:${e2ePort}`;
++
+ export default defineConfig({
+   testDir: "./e2e",
+   expect: { timeout: 15_000 },
+   fullyParallel: false,
+   forbidOnly: Boolean(process.env.CI),
+   retries: process.env.CI ? 2 : 0,
+   reporter: "html",
+   workers: 1,
+   use: {
+-    baseURL: "http://localhost:3100",
++    baseURL,
+     screenshot: "only-on-failure",
+     trace: "retain-on-failure",
+   },
+   projects: [
+     {
+       name: "chromium",
+       use: { ...devices["Desktop Chrome"] },
+     },
+   ],
+   webServer: {
+-    command: "npm run dev -- --hostname localhost --port 3100",
++    command: `npm run dev -- --hostname localhost --port ${e2ePort}`,
+     env: {
+       ...process.env,
+       NEXT_DIST_DIR: ".next-e2e",
+     },
+-    url: "http://localhost:3100",
++    url: baseURL,
+-    reuseExistingServer: !process.env.CI,
++    reuseExistingServer: false,
+     timeout: 120_000,
+   },
+ });
+```

@@ -35,6 +35,16 @@ const videoSchema = z.object({
     .optional(),
   heroPrimaryCta: nonEmptyText.nullable().optional(),
   heroSecondaryCta: nonEmptyText.nullable().optional(),
+  footerText: nonEmptyText.nullable().optional(),
+  routeCardTitle: nonEmptyText.nullable().optional(),
+  segmentCtaLabel: nonEmptyText.nullable().optional(),
+  valueCopyPrefix: nonEmptyText.nullable().optional(),
+  sideNoteSummary: nonEmptyText.nullable().optional(),
+  statsLabels: z.object({
+    duration: nonEmptyText,
+    required: nonEmptyText,
+    steps: nonEmptyText,
+  }).strict().nullable().optional(),
 }).strict();
 
 export const videoContentSchema = z.object({

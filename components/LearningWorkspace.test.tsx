@@ -51,6 +51,13 @@ describe("LearningWorkspace", () => {
     expect(screen.getByText("필수 구간부터 보기")).toBeInTheDocument();
     expect(screen.getByText("3줄 핵심 먼저 읽기")).toBeInTheDocument();
     expect(screen.getAllByText("핵심")).toHaveLength(1);
+    expect(screen.getByText("전체 영상")).toBeInTheDocument();
+    expect(screen.getByText("필수 구간")).toBeInTheDocument();
+    expect(screen.getByText("학습 과정")).toBeInTheDocument();
+    expect(screen.getByText("오늘의 학습 순서")).toBeInTheDocument();
+    expect(screen.getAllByText("이 구간 보기 →")).toHaveLength(2);
+    expect(screen.getByText("학습 전 꼭 확인")).toBeInTheDocument();
+    expect(screen.getByText("AI 호출 없이 저장된 검수 자료로 학습합니다.")).toBeInTheDocument();
   });
 
   it("renders presentation fields from the content data", () => {
@@ -72,6 +79,11 @@ describe("LearningWorkspace", () => {
           ],
           heroPrimaryCta: "학습 시작",
           heroSecondaryCta: "요약 읽기",
+          footerText: "로컬 저장 자료만 사용합니다",
+          routeCardTitle: "학습 로드맵",
+          segmentCtaLabel: "구간 재생 →",
+          sideNoteSummary: "시작 전 확인",
+          statsLabels: { duration: "총 길이", required: "핵심 길이", steps: "단계 수" },
         })}
       />,
     );
@@ -92,5 +104,20 @@ describe("LearningWorkspace", () => {
     expect(screen.getByText("학습 시작")).toBeInTheDocument();
     expect(screen.getByText("요약 읽기")).toBeInTheDocument();
     expect(screen.getByText("필수 구간 1개")).toBeInTheDocument();
+    expect(screen.getByText("로컬 저장 자료만 사용합니다")).toBeInTheDocument();
+    expect(screen.getByText("학습 로드맵")).toBeInTheDocument();
+    expect(screen.getAllByText("구간 재생 →")).toHaveLength(2);
+    expect(screen.getByText("시작 전 확인")).toBeInTheDocument();
+    expect(screen.getByText("총 길이")).toBeInTheDocument();
+    expect(screen.getByText("핵심 길이")).toBeInTheDocument();
+    expect(screen.getByText("단계 수")).toBeInTheDocument();
+    expect(screen.queryByText("전체 영상")).toBeNull();
+    expect(screen.queryByText("오늘의 학습 순서")).toBeNull();
+    expect(screen.queryByText("AI 호출 없이 저장된 검수 자료로 학습합니다.")).toBeNull();
+  });
+
+  it("uses valueCopyPrefix in the derived intro copy", () => {
+    render(<LearningWorkspace content={reviewedContent({ valueCopyPrefix: "분 요약:" })} />);
+    expect(screen.getByText("10분 요약: 테스트 영상 이해하기")).toBeInTheDocument();
   });
 });

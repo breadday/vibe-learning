@@ -30,7 +30,17 @@
       { "label": "실습", "href": "#practice" }
     ],
     "heroPrimaryCta": "필수 구간부터 보기",
-    "heroSecondaryCta": "3줄 핵심 먼저 읽기"
+    "heroSecondaryCta": "3줄 핵심 먼저 읽기",
+    "footerText": "AI 호출 없이 저장된 검수 자료로 학습합니다.",
+    "routeCardTitle": "오늘의 학습 순서",
+    "segmentCtaLabel": "이 구간 보기 →",
+    "valueCopyPrefix": "분 안에",
+    "sideNoteSummary": "학습 전 꼭 확인",
+    "statsLabels": {
+      "duration": "전체 영상",
+      "required": "필수 구간",
+      "steps": "학습 과정"
+    }
   },
   "freshness": {
     "status": "review-needed",

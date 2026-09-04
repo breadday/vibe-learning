@@ -58,6 +58,12 @@ describe("videoContentSchema", () => {
         ],
         heroPrimaryCta: "필수 구간부터 보기",
         heroSecondaryCta: "3줄 핵심 먼저 읽기",
+        footerText: "AI 호출 없이 저장된 검수 자료로 학습합니다.",
+        routeCardTitle: "오늘의 학습 순서",
+        segmentCtaLabel: "이 구간 보기 →",
+        valueCopyPrefix: "분 안에",
+        sideNoteSummary: "학습 전 꼭 확인",
+        statsLabels: { duration: "전체 영상", required: "필수 구간", steps: "학습 과정" },
       },
     };
     expect(videoContentSchema.safeParse(withFields).success).toBe(true);
@@ -67,6 +73,30 @@ describe("videoContentSchema", () => {
       video: { ...validContent().video, subtitle: "   " },
     };
     expect(videoContentSchema.safeParse(blankSubtitle).success).toBe(false);
+
+    const blankFooterText = {
+      ...validContent(),
+      video: { ...validContent().video, footerText: "   " },
+    };
+    expect(videoContentSchema.safeParse(blankFooterText).success).toBe(false);
+
+    const blankStatsLabel = {
+      ...validContent(),
+      video: {
+        ...validContent().video,
+        statsLabels: { duration: "전체 영상", required: "   ", steps: "학습 과정" },
+      },
+    };
+    expect(videoContentSchema.safeParse(blankStatsLabel).success).toBe(false);
+
+    const statsLabelWithUnknownKey = {
+      ...validContent(),
+      video: {
+        ...validContent().video,
+        statsLabels: { duration: "전체 영상", required: "필수 구간", steps: "학습 과정", unit: "분" },
+      },
+    };
+    expect(videoContentSchema.safeParse(statsLabelWithUnknownKey).success).toBe(false);
 
     const blankNavLabel = {
       ...validContent(),

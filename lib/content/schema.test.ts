@@ -37,6 +37,28 @@ describe("videoContentSchema", () => {
     expect(videoContentSchema.safeParse(validContent()).success).toBe(true);
   });
 
+  it("accepts optional presentation fields and rejects blank ones", () => {
+    const withFields = {
+      ...validContent(),
+      video: {
+        ...validContent().video,
+        subtitle: "14분 안에 이해합니다",
+        introDescription: null,
+        summaryTitle: "이 영상의 핵심 3줄",
+        summarySectionTitle: "이해하기",
+        segmentsSectionTitle: "골라 보기",
+        practiceSectionTitle: "직접 해보기",
+      },
+    };
+    expect(videoContentSchema.safeParse(withFields).success).toBe(true);
+
+    const blankSubtitle = {
+      ...validContent(),
+      video: { ...validContent().video, subtitle: "   " },
+    };
+    expect(videoContentSchema.safeParse(blankSubtitle).success).toBe(false);
+  });
+
   it("rejects reversed and overlapping segments", () => {
     const reversed = validContent();
     reversed.segments[0].startSeconds = 30;

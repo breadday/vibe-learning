@@ -19,6 +19,12 @@ const videoSchema = z.object({
   durationSeconds: z.number().int().positive().nullable(),
   language: z.enum(["ko", "en"]).nullable(),
   originalUrl: httpsUrl.nullable(),
+  subtitle: nonEmptyText.nullable().optional(),
+  introDescription: nonEmptyText.nullable().optional(),
+  summaryTitle: nonEmptyText.nullable().optional(),
+  summarySectionTitle: nonEmptyText.nullable().optional(),
+  segmentsSectionTitle: nonEmptyText.nullable().optional(),
+  practiceSectionTitle: nonEmptyText.nullable().optional(),
 }).strict();
 
 export const videoContentSchema = z.object({

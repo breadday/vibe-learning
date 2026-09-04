@@ -9,7 +9,13 @@
     "publishedAt": "2026-08-21",
     "durationSeconds": 827,
     "language": "ko",
-    "originalUrl": "https://www.youtube.com/watch?v=dKQQs-z_E64"
+    "originalUrl": "https://www.youtube.com/watch?v=dKQQs-z_E64",
+    "subtitle": "14분 안에 코딩 에이전트의 구조와 안전한 권한 설정을 이해합니다.",
+    "introDescription": null,
+    "summaryTitle": "이 영상의 핵심 3줄",
+    "summarySectionTitle": "이해하기",
+    "segmentsSectionTitle": "골라 보기",
+    "practiceSectionTitle": "직접 해보기"
   },
   "freshness": {
     "status": "review-needed",

@@ -2,11 +2,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createLearningId,
   createEmptyLearningStore,
+  learningStorageQuotaBytes,
   learningStoreKey,
+  learningStoreWarningEvent,
   loadLearningStore,
+  measureLearningStorageUsage,
   saveLearningStore,
   updateCurrentVideo,
   type LearningStore,
+  type LearningStorageUsage,
 } from "./learningStore";
 
 const videoId = "ABCDEFGHIJK";
@@ -214,6 +218,84 @@ describe("learningStore", () => {
     });
   });
 });
+
+describe("learningStorageUsage", () => {
+  it("measures empty usage as zero bytes below the warning threshold", () => {
+    expect(measureLearningStorageUsage()).toEqual({
+      bytes: 0,
+      quotaBytes: learningStorageQuotaBytes,
+      usedRatio: 0,
+      overThreshold: false,
+    });
+
+    expect(saveLearningStore(populatedStore())).toEqual({ ok: true });
+    expect(measureLearningStorageUsage()?.overThreshold).toBe(false);
+  });
+
+  it("flags stored data once it crosses the warning threshold", () => {
+    const bytes = Math.floor(learningStorageQuotaBytes * 0.9);
+    window.localStorage.setItem(learningStoreKey, "x".repeat(bytes));
+
+    const usage = measureLearningStorageUsage();
+    expect(usage?.bytes).toBe(bytes);
+    expect(usage?.overThreshold).toBe(true);
+  });
+
+  it("warns through an event and the console when a save exceeds the threshold", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnings: LearningStorageUsage[] = [];
+    const handleWarning = (event: Event) => {
+      warnings.push((event as CustomEvent<LearningStorageUsage>).detail);
+    };
+    window.addEventListener(learningStoreWarningEvent, handleWarning);
+
+    try {
+      expect(saveLearningStore(oversizedStore())).toEqual({ ok: true });
+
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]?.overThreshold).toBe(true);
+      expect(warnings[0]?.bytes).toBeGreaterThan(
+        learningStorageQuotaBytes * 0.8,
+      );
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      window.removeEventListener(learningStoreWarningEvent, handleWarning);
+    }
+  });
+});
+
+function oversizedStore(): LearningStore {
+  const noteText = "가".repeat(2_000);
+
+  return {
+    schemaVersion: 1,
+    videos: Array.from({ length: 720 }, (_, index) => {
+      const youtubeId = `T${String(index).padStart(10, "0")}`;
+
+      return {
+        youtubeId,
+        title: `테스트 영상 ${index}`,
+        normalizedUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
+        status: "not-started" as const,
+        playbackMode: "embedded" as const,
+        playbackSeconds: 0,
+        notes: [
+          {
+            id: createLearningId(),
+            timestampSeconds: 0,
+            text: noteText,
+            createdAt: "2026-08-29T10:00:00.000Z",
+            updatedAt: "2026-08-29T10:00:00.000Z",
+          },
+        ],
+        segments: [],
+        createdAt: "2026-08-29T10:00:00.000Z",
+        updatedAt: "2026-08-29T10:00:00.000Z",
+      };
+    }),
+    lastOpenedVideoId: "T0000000000",
+  };
+}
 
 function note(id: string, text: string) {
   return {

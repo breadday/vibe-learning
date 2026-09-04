@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import { notFound } from "next/navigation";
 import { LearningWorkspace } from "@/components/LearningWorkspace";
 import FirstVideoContent from "@/content/reviewed/first-video.mdx";
+import SecondVideoContent from "@/content/reviewed/second-video.mdx";
 import {
   listReviewedContent,
   loadReviewedContent,
@@ -11,6 +12,7 @@ export const dynamic = "force-static";
 
 const reviewedMdx: Record<string, ComponentType> = {
   "first-video": FirstVideoContent,
+  "second-video": SecondVideoContent,
 };
 
 export async function generateStaticParams() {

@@ -18,6 +18,37 @@ describe("loadReviewedContent", () => {
   it("returns null for a slug that escapes the content directory", async () => {
     await expect(loadReviewedContent("../package")).resolves.toBeNull();
   });
+
+  it("loads the second video with verified metadata and generalization copy", async () => {
+    const content = await loadReviewedContent("second-video");
+    expect(content).not.toBeNull();
+    expect(content?.verificationStatus).toBe("reviewed");
+    expect(content?.video.youtubeId).toBe("Q_oL9yY-ZTM");
+    expect(content?.video.durationSeconds).toBe(3283);
+    expect(content?.video.statsLabels).toEqual({
+      duration: "전체 길이",
+      required: "필수 구간",
+      steps: "실습 단계",
+    });
+    expect(content?.segments).toHaveLength(4);
+    expect(content?.practiceSteps).toHaveLength(3);
+    expect(content?.video.keyPoints).toHaveLength(4);
+    expect(content?.mdxContent).toContain("이 영상을 볼 가치");
+    expect(content?.mdxContent).toContain("핵심 요약");
+  });
+
+  it("serves both reviewed slugs with their own hero and route copy", async () => {
+    const contents = await listReviewedContent();
+    const slugs = contents.map((content) => content.slug);
+    expect(slugs).toContain("first-video");
+    expect(slugs).toContain("second-video");
+
+    const second = contents.find((content) => content.slug === "second-video");
+    expect(second?.video.heroPrimaryCta).toBe("설치 구간부터 보기");
+    expect(second?.video.routeCardTitle).toBe("학습 로드맵");
+    expect(second?.video.segmentCtaLabel).toBe("구간 재생 →");
+    expect(second?.video.sideNoteSummary).toBe("시작하기 전에");
+  });
 });
 
 describe("listReviewedContent", () => {

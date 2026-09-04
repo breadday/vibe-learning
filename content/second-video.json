@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "verificationStatus": "reviewed",
+  "slug": "second-video",
+  "video": {
+    "youtubeId": "Q_oL9yY-ZTM",
+    "title": "코딩 왕초보가 커서 AI로 돈 버는 블로그 만들기 풀코스 전편 몰아보기",
+    "channel": "콜잇 AI | Cole IT AI",
+    "publishedAt": "2025-10-13",
+    "durationSeconds": 3283,
+    "language": "ko",
+    "originalUrl": "https://www.youtube.com/watch?v=Q_oL9yY-ZTM",
+    "subtitle": "55분 안에 커서 설치부터 프롬프팅, 배포와 데이터베이스 연결까지 블로그 만들기 전 과정을 따라갑니다.",
+    "introDescription": "코딩 왕초보도 커서(Cursor)와 함께 블로그를 만들 수 있다는 전제로, 설치·프롬프팅·깃허브·배포·데이터베이스·로그인·디자인까지 하나의 흐름으로 이어지는 풀코스입니다.",
+    "summaryTitle": "이 영상의 핵심 4줄",
+    "summarySectionTitle": "핵심 파악",
+    "segmentsSectionTitle": "구간 선택",
+    "practiceSectionTitle": "따라하기",
+    "segmentsTitle": "챕터 중 필요한 흐름만 고르기",
+    "practiceTitle": "커서로 블로그 기반 다지기",
+    "keyPoints": [
+      "코딩 문법 공부 대신 커서(Cursor)와 함께 만들면서 배우기로 전환하는 흐름을 다룹니다.",
+      "역할, 상황, 목표, 조건을 담아 명확히 지시하고 @ 기능으로 프로젝트 맥락을 전달하는 프롬프팅 기술을 비교 시연합니다.",
+      "깃허브 연동과 버셀 배포로 코드를 보존하고 사이트를 자동으로 업데이트하는 과정을 보여줍니다.",
+      "슈퍼베이스로 데이터베이스와 구글 로그인을 붙이고, 테일윈드 CSS로 디자인을 마무리하는 순서를 소개합니다."
+    ],
+    "contextLabel": "오늘의 커서 실전 학습",
+    "navItems": [
+      { "label": "핵심 요약", "href": "#summary" },
+      { "label": "구간 학습", "href": "#segments" },
+      { "label": "따라하기", "href": "#practice" }
+    ],
+    "heroPrimaryCta": "설치 구간부터 보기",
+    "heroSecondaryCta": "핵심 4줄 먼저 읽기",
+    "footerText": "검수된 자료만으로 학습하고 결과는 내 브라우저에만 저장합니다.",
+    "routeCardTitle": "학습 로드맵",
+    "segmentCtaLabel": "구간 재생 →",
+    "valueCopyPrefix": "분 안에",
+    "sideNoteSummary": "시작하기 전에",
+    "statsLabels": {
+      "duration": "전체 길이",
+      "required": "필수 구간",
+      "steps": "실습 단계"
+    }
+  },
+  "freshness": {
+    "status": "review-needed",
+    "checkedAt": "2026-09-04",
+    "reason": "YouTube에서 제목, 채널, 게시일, 영상 길이와 제작자가 남긴 챕터 목록을 확인했지만, 커서·버셀·슈퍼베이스 화면과 요금 정책은 빠르게 바뀌므로 실습 전에 공식 문서 재확인이 필요합니다."
+  },
+  "segments": [
+    {
+      "type": "required",
+      "startSeconds": 495,
+      "endSeconds": 1180,
+      "title": "세상에서 가장 똑똑한 AI 조수 채용하기",
+      "reason": "커서 설치와 모델 세팅 과정을 다루는 챕터로, 실습 준비를 위해 먼저 확인할 구간입니다."
+    },
+    {
+      "type": "required",
+      "startSeconds": 1180,
+      "endSeconds": 1795,
+      "title": "AI를 천재로 만드는 소통의 기술",
+      "reason": "역할·상황·목표·조건을 담은 지시문과 @ 기능 활용을 비교 시연하는 챕터입니다."
+    },
+    {
+      "type": "optional",
+      "startSeconds": 2110,
+      "endSeconds": 2430,
+      "title": "전 세계에 내 프로젝트 자랑하기",
+      "reason": "버셀 연동으로 온라인 주소를 만들고 배포를 자동화하는 흐름을 확인할 수 있는 챕터입니다."
+    },
+    {
+      "type": "reference",
+      "startSeconds": 3045,
+      "endSeconds": 3283,
+      "title": "못생긴 블로그, AI로 리모델링하기",
+      "reason": "테일윈드 CSS로 레이아웃과 카드 UI를 다듬는 마무리 챕터입니다."
+    }
+  ],
+  "practiceSteps": [
+    {
+      "title": "커서 설치와 기본 세팅",
+      "instruction": "챕터 2의 안내에 따라 커서를 설치하고, 자주 쓰는 모델과 에이전트 설정을 점검해 나만의 기본 환경을 만듭니다."
+    },
+    {
+      "title": "깃허브 연동으로 코드 보험 만들기",
+      "instruction": "챕터 4의 흐름대로 AI에게 물어가며 저장소를 연동하고, 커밋과 복구 절차를 직접 확인합니다."
+    },
+    {
+      "title": "버셀 배포로 온라인 주소 받기",
+      "instruction": "챕터 5를 따라 깃허브 저장소를 버셀에 연결해 배포하고, 코드를 올렸을 때 사이트가 자동으로 갱신되는지 확인합니다."
+    }
+  ],
+  "copyBlocks": [
+    {
+      "kind": "prompt",
+      "title": "역할·상황·목표·조건 담은 지시문",
+      "language": "text",
+      "content": "너는 내 프로젝트의 개발 조수다. 다음 네 가지를 채워서 지시한다.\n\n역할: [예: 초보자와 함께 작업하는 프론트엔드 개발자]\n상황: [예: 커서로 만든 블로그에 게시글 목록을 추가하려는 중]\n목표: [예: 게시글을 카드 UI로 보여주기]\n조건: [예: 테일윈드 CSS만 사용, 기존 파일 구조 유지]\n\n계획을 먼저 제시하고, 어떤 파일을 수정하는지 변경 전에 알려달라."
+    },
+    {
+      "kind": "prompt",
+      "title": "깃허브 연동 단계별 요청",
+      "language": "text",
+      "content": "이 프로젝트를 깃허브에 연결하고 싶다. 복잡한 명령어를 한 번에 알려주지 말고, 지금 화면에서 무엇을 클릭하고 입력할지 한 단계씩 안내해 달라. 각 단계의 결과를 내가 확인한 뒤에 다음 단계로 넘어가 달라."
+    }
+  ],
+  "concepts": [
+    {
+      "term": "커서(Cursor)",
+      "description": "AI 코딩 도구가 결합된 코드 에디터입니다. 영상에서는 비개발자가 AI 조수와 함께 서비스를 만드는 도구로 소개합니다."
+    },
+    {
+      "term": "프롬프팅",
+      "description": "AI에게 역할, 상황, 목표, 조건을 담아 명확히 지시하는 소통 기술입니다. 영상은 좋은 질문과 나쁜 질문을 비교해 보여줍니다."
+    },
+    {
+      "term": "깃허브",
+      "description": "코드 변경 이력을 저장하고 되돌릴 수 있게 지켜주는 저장소 서비스입니다. 영상은 개발자의 보험이자 금고로 표현합니다."
+    },
+    {
+      "term": "버셀(Vercel)",
+      "description": "깃허브에 코드를 올리면 사이트를 자동으로 빌드하고 배포하는 호스팅 서비스입니다."
+    },
+    {
+      "term": "슈퍼베이스(Supabase)",
+      "description": "데이터베이스와 인증 같은 백엔드 기능을 제공하는 서비스입니다. 영상에서는 DB 설계와 구글 로그인 연결에 사용합니다."
+    },
+    {
+      "term": "테일윈드 CSS",
+      "description": "클래스 이름으로 스타일을 지정하는 CSS 프레임워크입니다. 영상은 AI와의 대화만으로 레이아웃과 카드 UI를 꾸미는 도구로 소개합니다."
+    }
+  ],
+  "warnings": [
+    "구간과 요약은 제작자가 영상 설명에 남긴 챕터 정보를 기준으로 정리했으므로, 세부 내용은 원본 영상으로 최종 확인하세요.",
+    "커서, 버셀, 슈퍼베이스, 구글 클라우드의 화면과 요금 정책은 자주 바뀝니다. 영상의 설정 화면을 그대로 따라 하지 말고 각 서비스 공식 문서로 현재 절차를 확인하세요.",
+    "깃허브와 클라우드 서비스를 연결할 때 API 키나 인증 토큰을 채팅에 붙여 넣거나 공개 저장소에 커밋하지 마세요."
+  ],
+  "sources": [
+    {
+      "type": "original",
+      "title": "원본 영상 — 콜잇 AI | Cole IT AI",
+      "url": "https://www.youtube.com/watch?v=Q_oL9yY-ZTM"
+    },
+    {
+      "type": "official",
+      "title": "Cursor 공식 문서",
+      "url": "https://docs.cursor.com"
+    },
+    {
+      "type": "official",
+      "title": "Vercel 공식 문서",
+      "url": "https://vercel.com/docs"
+    },
+    {
+      "type": "official",
+      "title": "Supabase 공식 문서",
+      "url": "https://supabase.com/docs"
+    }
+  ],
+  "todo": []
+}

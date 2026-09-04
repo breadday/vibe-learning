@@ -2,6 +2,9 @@ import { z } from "zod";
 
 export const learningStoreKey = "vibe-learning:v1";
 export const learningStoreChangedEvent = "vibe-learning:store-changed";
+export const learningStoreWarningEvent = "vibe-learning:store-warning";
+export const learningStorageQuotaBytes = 5 * 1024 * 1024;
+export const learningStorageWarningRatio = 0.8;
 
 const learningNoteSchema = z
   .object({
@@ -122,6 +125,13 @@ export type SaveLearningStoreResult =
     reason: "invalid-data" | "quota-exceeded" | "storage-unavailable";
   };
 
+export type LearningStorageUsage = {
+  bytes: number;
+  quotaBytes: number;
+  usedRatio: number;
+  overThreshold: boolean;
+};
+
 export function createLearningId(): string {
   if (typeof globalThis.crypto?.randomUUID === "function") {
     return globalThis.crypto.randomUUID();
@@ -193,6 +203,7 @@ export function saveLearningStore(
       JSON.stringify(validatedStore),
     );
     window.dispatchEvent(new Event(learningStoreChangedEvent));
+    checkLearningStorageUsage();
     return { ok: true };
   } catch (error) {
     if (isQuotaExceededError(error)) {
@@ -201,6 +212,46 @@ export function saveLearningStore(
 
     return { ok: false, reason: "storage-unavailable" };
   }
+}
+
+export function measureLearningStorageUsage(): LearningStorageUsage | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  let storedValue: string | null;
+  try {
+    storedValue = window.localStorage.getItem(learningStoreKey);
+  } catch {
+    return null;
+  }
+
+  const bytes = storedValue === null ? 0 : new Blob([storedValue]).size;
+  const usedRatio = bytes / learningStorageQuotaBytes;
+  return {
+    bytes,
+    quotaBytes: learningStorageQuotaBytes,
+    usedRatio,
+    overThreshold: usedRatio >= learningStorageWarningRatio,
+  };
+}
+
+export function checkLearningStorageUsage(): LearningStorageUsage | null {
+  const usage = measureLearningStorageUsage();
+
+  if (usage === null || !usage.overThreshold) {
+    return usage;
+  }
+
+  console.warn(
+    `localStorage 사용량이 임계치를 넘었습니다: ${usage.bytes} / ${usage.quotaBytes} bytes`,
+  );
+  window.dispatchEvent(
+    new CustomEvent<LearningStorageUsage>(learningStoreWarningEvent, {
+      detail: usage,
+    }),
+  );
+  return usage;
 }
 
 export function updateCurrentVideo(

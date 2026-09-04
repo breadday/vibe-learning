@@ -42,7 +42,8 @@ export async function listReviewedContent(): Promise<ReviewedContent[]> {
   const entries = await fs.readdir(contentDir);
   const slugs = entries
     .filter((entry) => entry.endsWith(".json"))
-    .map((entry) => entry.slice(0, -".json".length));
+    .map((entry) => entry.slice(0, -".json".length))
+    .sort();
   const contents = await Promise.all(
     slugs.map((slug) => loadReviewedContent(slug)),
   );
